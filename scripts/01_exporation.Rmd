@@ -15,51 +15,260 @@ knitr::opts_chunk$set(echo = TRUE)
 
 This project uses soil volumentric water content (VWC) and temperature (Ts) data from the RainManSR project to predict soil water potential (SWP), which is available from a subset of plots/treatments. The project goals are two-fold: 1) to extract Van Genuchten model parameters for use in predicting SWP mechanistically, using model such as Hydrus 1D, and 2) to develop a statistical model of SWP using VWC in a hierarhical Bayesian framework and predict the missing values of SWP for other plots/treatments. 
 
-```{r library}
+```{r}
 library(xts)
 library(dplyr)
 library(ggplot2)
+library(RColorBrewer)
+library(plotly)
+source("../source/VPD.R")
 ```
 
 ## Data exploration
 
-The data are recorded as halfhourly time series. Depths 1 - 3 correspond with 0-12 cm, 25 cm, and 75 cm respectively. VWC data is provided along with SWP and environmental data of air temperature and RH, both inside and outside the houses. 
+Soil temperature and soil water data are recorded as half-hourly time series in two .csv files. Depths 1 - 3 correspond with 0-12 cm, 25 cm, and 75 cm respectively. Soil water data includes VWC, SWP, and air temperature & RH both inside and outside the houses. Data are read in and and converted to long format for plotting and summarizing purposes. Three dataframes are produced: Ts (soil temperature only), WC (VWC and SWP), and Ta (air temperature, RH, and VPD). 
+Air temperature below -6 or so is not reasonable, so filter out T values < -10. 
 
-```{r data_in_ggplot}
+```{r}
 Ts <- read.csv("../data/Halfhourly_TS_0113.csv") %>%
   dplyr::select(-X) %>%
-  mutate(TIMESTAMP = as.POSIXct(TIMESTAMP)) %>%
+  mutate(TIMESTAMP = as.POSIXct(TIMESTAMP),
+         date = as.Date(TIMESTAMP)) %>%
   rename(dt = TIMESTAMP) %>%
-  tidyr::pivot_longer(!dt, names_to = c("Plot", "Depth", "House"), 
+  tidyr::pivot_longer(!c(dt, date), names_to = c("Plot", "Depth", "House"), 
                       names_pattern = "TS_P(.*)_(.*)_H(.*)") %>%
   mutate(House = factor(as.numeric(House)),
          Depth = factor(as.numeric(Depth)),
-         Plot = factor(as.numeric(Plot)))
+         Plot = factor(as.numeric(Plot)),
+         ID = paste0("P", Plot, "_", Depth, "_H", House)) %>%
+  arrange(ID, dt)
 
 WC <- read.csv("../data/Halfhourly_VWC_Weather_030621.csv") %>%
-  dplyr::select(-X) %>%
-  mutate(TIMESTAMP = as.POSIXct(TIMESTAMP)) %>%
+  dplyr::select(-X, -T_inside, -RH_inside, -T_outside, -RH_outside) %>%
+  mutate(TIMESTAMP = as.POSIXct(TIMESTAMP),
+         date = as.Date(TIMESTAMP)) %>%
   rename(dt = TIMESTAMP) %>%
-  tidyr::pivot_longer(!c(dt, T_inside, RH_inside, T_outside, RH_outside), 
+  tidyr::pivot_longer(!c(dt, date), 
                       names_to = c("Variable", "Plot", "Depth", "House"), 
-                      names_pattern = "(.*)_P(.*)_(.*)_H(.*)")
+                      names_pattern = "(.*)_P(.*)_(.*)_H(.*)") %>%
+  mutate(House = factor(as.numeric(House)),
+         Depth = factor(as.numeric(Depth)),
+         Plot = factor(as.numeric(Plot)),
+         ID = paste0(Variable, "_P", Plot, "_", Depth, "_H", House)) %>%
+  arrange(ID, dt)
+
+Ta <- read.csv("../data/Halfhourly_VWC_Weather_030621.csv") %>%
+  dplyr::select(TIMESTAMP, T_inside, RH_inside, T_outside, RH_outside) %>%
+  mutate(TIMESTAMP = as.POSIXct(TIMESTAMP),
+         date = as.Date(TIMESTAMP),
+         T_inside = ifelse(T_inside < -10, NA, T_inside),
+         T_outside = ifelse(T_outside < -10, NA, T_outside),
+         D_inside = VPD(RH_inside/100, T_inside),
+         D_outside = VPD(RH_outside/100, T_outside)) %>%
+  rename(dt = TIMESTAMP) %>%
+  tidyr::pivot_longer(!c(dt, date), 
+                      names_to = c("Variable", "Location"), 
+                      names_pattern = "(.*)_(.*)") %>% 
+  arrange(Variable, Location, dt)
 ```
 
-```{r ggplot, echo = FALSE}
-ggplot(Ts, aes(x = dt, y = value)) +
-  geom_point(aes(color = Depth), size = 0.5) +
-  facet_wrap(~House, ncol = 7)
+Half-hourly data can be challenging to plot, so initial plots are created of daily mean/max/min.  
+
+First, Ts at each of 28 house/plot combinations. Each house has 12 plots, of which 5 were instrumented in houses 1 and 5, 3 were instrumented in houses 2 and 4, and all 12 were instrumented in house 3. Of the instrumented plots, all 5 in houses 1 and 5 and 5 of 12 plots in house 3 were instrumented for all 3 depths. The remaininbg plots were only instrumented at the shallow (0-12 cm) depth. 
+```{r, echo = FALSE}
+# Soil temperature
+Ts_daily <- Ts %>%
+  group_by(ID, date) %>%
+  summarise(Ts_mean = mean(value, na.rm = T),
+            Ts_min = min(value, na.rm = T),
+            Ts_max = max(value, na.rm = T),
+            House = unique(House),
+            Depth = unique(Depth),
+            Plot = unique(Plot)) %>%
+  mutate(plotID = paste0(House, "_", Plot))
+
+cols <- brewer.pal(9, "BrBG")
+# display.brewer.pal(9, "BrBG")
+ggplot(Ts_daily, aes(x = date, y = Ts_mean, color = Depth)) +
+  geom_errorbar(aes(ymin = Ts_min, ymax = Ts_max), width = 0, alpha = 0.2) +
+  geom_point(size = 0.25) +
+  scale_y_continuous(expression(paste(T[soil], " (", degree, "C)"))) +
+  scale_x_date(date_labels = "%b") + 
+  facet_wrap(~plotID, nrow = 7) + 
+  theme_bw(base_size = 12) +
+  scale_color_manual(labels = c("0-12 cm", "25 cm", "75 cm"), values = cols[1:3]) +
+  theme(axis.title.x = element_blank(),
+        strip.background = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
 ```
 
-Data are read into the xts format, which has extensive plotting capabilities
-```{r data_in_xts}
-Ts <- read.csv("../data/Halfhourly_TS_0113.csv") %>%
-  dplyr::select(-X) %>%
-  mutate(TIMESTAMP = as.POSIXct(TIMESTAMP)) %>%
-  tibble::column_to_rownames("TIMESTAMP")
+Next, soil water potential at two plots. Two plots within house 3 were instrumented for SWP at all three depths. It appears that these 2 plots were subjected to different treatments.
+```{r, echo = FALSE}
+# Soil water potential
+WP_daily <- WC %>%
+  filter(Variable == "SWP") %>%
+  group_by(ID, date) %>%
+  summarise(WP_mean = mean(value, na.rm = TRUE),
+            WP_min = min(value, na.rm = TRUE),
+            WP_max = max(value, na.rm = TRUE),
+            House = unique(House),
+            Depth = unique(Depth),
+            Plot = unique(Plot)) %>%
+  mutate(plotID = paste0(House, "_", Plot),
+         WP_min = ifelse(!is.finite(WP_min), NA, WP_min),
+         WP_max = ifelse(!is.finite(WP_max), NA, WP_max)) %>%
+  ungroup()
 
-xTs <- as.xts(Ts)
-ep <- endpoints(xTs, on = "days")
-Ts_daily <-period.apply(xTs, INDEX = ep, FUN = colMeans, na.rm = TRUE)
-plot(Ts_daily)
+cols <- brewer.pal(11, "Spectral")
+# display.brewer.pal(11, "Spectral")
+ggplot(WP_daily, aes(x = date, y = WP_mean/1000, color = Depth)) +
+  geom_errorbar(aes(ymin = WP_min/1000, ymax = WP_max/1000), width = 0, alpha = 0.2) +
+  geom_point(size = 0.25) +
+  scale_y_continuous(expression(paste(Psi[soil], " (MPa)"))) +
+  scale_x_date(date_labels = "%b") + 
+  facet_wrap(~plotID, nrow = 2) + 
+  theme_bw(base_size = 12) +
+  scale_color_manual(labels = c("0-12 cm", "25 cm", "75 cm"), values = cols[11:9]) +
+  theme(axis.title.x = element_blank(),
+        strip.background = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+# ggplotly()
+```
+
+Next, soil water content at each of 28 house/plot combinations. These were instrumented to match the soil temperature probes. The temporal repackaging watering treatments are particularly apparent at the shallow depth. 
+```{r, echo = FALSE}
+# Soil water content
+WC_daily <- WC %>%
+  filter(Variable == "VWC") %>%
+  group_by(ID, date) %>%
+  summarise(WC_mean = mean(value, na.rm = TRUE),
+            WC_min = min(value, na.rm = TRUE),
+            WC_max = max(value, na.rm = TRUE),
+            House = unique(House),
+            Depth = unique(Depth),
+            Plot = unique(Plot)) %>%
+  mutate(plotID = paste0(House, "_", Plot),
+         WC_min = ifelse(!is.finite(WC_min), NA, WC_min),
+         WC_max = ifelse(!is.finite(WC_max), NA, WC_max)) %>%
+  ungroup()
+
+cols <- brewer.pal(11, "Spectral")
+# display.brewer.pal(11, "Spectral")
+ggplot(WC_daily, aes(x = date, y = WC_mean, color = Depth)) +
+  geom_errorbar(aes(ymin = WC_min, ymax = WC_max), width = 0, alpha = 0.2) +
+  geom_point(size = 0.25) +
+  scale_y_continuous(expression(paste(Theta[soil], "( ", m^3, " ", m^-3, ")"))) +
+  scale_x_date(date_labels = "%b") + 
+  facet_wrap(~plotID, nrow = 7) + 
+  theme_bw(base_size = 12) +
+  scale_color_manual(labels = c("0-12 cm", "25 cm", "75 cm"), values = cols[11:9]) +
+  theme(axis.title.x = element_blank(),
+        strip.background = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+# ggplotly()
+```
+
+Finally, VPD, RH, and air temperature are plotted for inside and outside of the houses. The large degree of overlap confirms that the houses are likely to have minimal impact on micrometeorological conditions. 
+```{r, echo = FALSE}
+# Ta: Temp, RH, VPD
+Ta_daily <- Ta %>%
+  group_by(Variable, Location, date) %>%
+  summarise(mean = mean(value, na.rm = TRUE),
+            min = min(value, na.rm = TRUE),
+            max = max(value, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(min = ifelse(!is.finite(min), NA, min),
+         max = ifelse(!is.finite(max), NA, max),
+         var = case_when(Variable == "T" ~ "T~(~degree~C)",
+                         Variable == "RH" ~ "RH~('%')",
+                         Variable == "D" ~ "D~(kPa)"),
+         Location = factor(Location, levels = c("outside", "inside")))
+
+ggplot(Ta_daily, aes(x = date, y = mean, color = Location)) +
+  geom_errorbar(aes(ymin = min, ymax = max), width = 0, alpha = 0.1) +
+  geom_point(size = 0.25, alpha = 0.75) +
+  scale_x_date(date_labels = "%b") + 
+  facet_wrap(~ var, nrow = 7, strip.position = "left", labeller = label_parsed,
+             scales = "free_y") + 
+  theme_bw(base_size = 12) +
+  theme(axis.title.x = element_blank(),
+        strip.background = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.title.y = element_blank(),
+        strip.placement = "outside",)
+# ggplotly()
+```
+
+## Matching soil water content and soil water potential
+
+For the two plots with both kinds of sensors, we combine the daily data and plot as a time-series to obtain the time periods of correlation.
+
+```{r, echo = FALSE}
+SW_long <- WC_daily %>%
+  select(-ID) %>%
+  filter(plotID %in% unique(WP_daily$plotID)) %>%
+  left_join(y = select(WP_daily, -ID, -plotID), 
+            by = c("date", "House", "Depth", "Plot")) %>%
+  mutate(ID = paste0("P", Plot, "_", Depth, "_H", House)) %>%
+  relocate(date, plotID, ID, Plot, Depth, House) %>%
+  tidyr::drop_na() %>%
+  tidyr::pivot_longer(!c(1:6), 
+                      names_to = c("Variable", "Type"), 
+                      names_pattern = "(.*)_(.*)") %>%
+  mutate(value = ifelse(Variable == "WP", value/1000, value)) %>%
+  tidyr::pivot_wider(names_from = "Type") %>%
+  mutate(var = case_when(Variable == "WC" ~ "Theta~(m^3~m^-3)",
+                         Variable == "WP" ~ "Psi~(MPa)"))
+
+cols <- brewer.pal(11, "Spectral")
+# display.brewer.pal(11, "Spectral")
+ggplot(SW_long, aes(x = date, color = Depth)) +
+  geom_errorbar(aes(ymin = min, ymax = max)) +
+  geom_point(aes(y = mean)) +
+  facet_grid(var~plotID, labeller = labeller(var = label_parsed),
+             scales = "free", switch = "y") + 
+  scale_color_manual(labels = c("0-12 cm", "25 cm", "75 cm"), values = cols[11:9]) +
+  theme_bw(base_size = 12) +
+  theme(axis.title.x = element_blank(),
+        strip.background = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.title.y = element_blank(),
+        strip.placement = "outside")
+```
+
+We plot the data in a 1:1 fashion. When only considering data after 7/13/2020 (when irrigation experiment began), the two deeper depths are not useable due to very low variation. 
+
+```{r}
+SW_wide <- WC_daily %>%
+  select(-ID) %>%
+  filter(plotID %in% unique(WP_daily$plotID)) %>%
+  left_join(y = select(WP_daily, -ID, -plotID), 
+            by = c("date", "House", "Depth", "Plot")) %>%
+  mutate(ID = paste0("P", Plot, "_", Depth, "_H", House),
+         WP_mean = WP_mean/1000,
+         WP_min = WP_min/1000,
+         WP_max = WP_max/1000,
+         depth = case_when(Depth == 1 ~ "0-12 cm",
+                           Depth == 2 ~ "25 cm",
+                           Depth == 3 ~ "75 cm",)) %>%
+  relocate(date, plotID, ID, Plot, Depth, House) %>%
+  tidyr::drop_na()
+
+ggplot(filter(SW_wide, date < as.Date("2020-07-13")), aes(y = WC_mean, x = WP_mean)) +
+  geom_errorbar(aes(ymin = WC_min, ymax = WC_max), alpha = 0.2) +
+  geom_errorbarh(aes(xmin = WP_min, xmax = WP_max), alpha = 0.2) +
+  geom_point(size = 0.25, alpha = 0.75) +
+  scale_x_continuous(expression(paste(Psi, " (MPa)"))) +
+  scale_y_continuous(expression(paste(Theta, "( ", m^3, " ", m^-3, ")"))) +
+  facet_grid(depth~plotID,  scales = "free") +
+  theme_bw(base_size = 12) +
+  theme(strip.background = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+  
 ```
