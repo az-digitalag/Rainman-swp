@@ -1,0 +1,62 @@
+---
+title: "Explore half-hourly data"
+author: "Jessica Guo"
+date: "4/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Soil data from RainMan SR
+
+After relating daily mean soil water content and soil water potential, we now focus on the S1-S4 treatment period of 7/13/2020 to 9/30/2020 and examine the half-hourly data
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(plotly)
+library(cowplot)
+```
+
+## Half-hourly ata exploration
+
+As before, we load in the half-hourly time series data for VWC, which contains VWC and WP. We match VWC and VWP up for the S1-S4 period, including only plots 3_4 and 3_7. 
+
+```{r}
+tm <- data.frame(Period = c("Winter 2020", "Premonsoon", "S1-S4", "Winter 2021"),
+                     st = c(as.Date("2019-11-01"), as.Date("2020-05-01"), 
+                            as.Date("2020-07-13"), as.Date("2020-10-01")),
+                     en = c(as.Date("2020-04-30"), as.Date("2020-07-12"),
+                            as.Date("2020-09-30"), as.Date("2021-03-06")))
+tm$Period <- factor(tm$Period, levels = c("Winter 2020", "Premonsoon", "S1-S4", "Winter 2021"))
+
+WC <- read.csv("../data/Halfhourly_VWC_Weather_030621.csv") %>%
+  dplyr::select(-X, -T_inside, -RH_inside, -T_outside, -RH_outside) %>%
+  mutate(TIMESTAMP = as.POSIXct(TIMESTAMP),
+         date = as.Date(TIMESTAMP)) %>%
+  rename(dt = TIMESTAMP) %>%
+  tidyr::pivot_longer(!c(dt, date), 
+                      names_to = c("Variable", "Plot", "Depth", "House"), 
+                      names_pattern = "(.*)_P(.*)_(.*)_H(.*)") %>%
+  mutate(House = factor(as.numeric(House)),
+         Depth = factor(as.numeric(Depth)),
+         Plot = factor(as.numeric(Plot)),
+         ID = paste0(Variable, "_P", Plot, "_", Depth, "_H", House)) %>%
+  arrange(ID, dt) %>%
+  dplyr::select(-ID) %>%
+  filter(House == "3" & Plot %in% c("4", "7")) %>%
+  tidyr::drop_na() %>%
+  tidyr::pivot_wider(names_from = "Variable", values_from = "value") %>%
+  mutate(Period = case_when(date <= tm$en[1] & date >= tm$st[1] ~ tm$Period[1],
+                            date <= tm$en[2] & date >= tm$st[2] ~ tm$Period[2],
+                            date <= tm$en[3] & date >= tm$st[3] ~ tm$Period[3],
+                            date <= tm$en[4] & date >= tm$st[4] ~ tm$Period[4]))
+
+
+ggplot(WC)
+```
+
+Half-hourly data can be challenging to plot, so initial plots are created of daily mean/max/min. 
