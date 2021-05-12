@@ -63,11 +63,10 @@ WC <- read.csv("../data/Halfhourly_VWC_Weather_030621.csv") %>%
          year = year(dt),
          week = isoweek(dt),
          year_week = paste0(year, "_", week))
-
 ```
 
 Half-hourly data plots
-```{r, echo = FALSE, warning = FALSE}
+```{r, warning = FALSE}
 cols <- brewer.pal(11, "Spectral")
 yws <- unique(WC$year_week)
 for(yw in yws) {
@@ -99,10 +98,11 @@ for(yw in yws) {
            x = expression(paste(Theta, " (", m^3, " ", m^-3, ")"))) +
       theme_bw(base_size = 12) +
       guides(color = FALSE)
+
+    ggsave2(paste0("../plots/weekly/", yw, ".jpg"),
+            plot = plot_grid(fig1, fig2, nrow = 2, rel_heights = c(2, 1)),                             height = 6, width = 6, units = "in")
+
     
-    jpeg(paste0("../plots/weekly/", yw, ".jpg"), height = 6, width = 6, 
-         units = "in", res = 600)
-    plot_grid(fig1, fig2, nrow = 2, rel_heights = c(2, 1))
-    dev.off()
+    print(paste0("Done with ", yw))
 }
 ```
