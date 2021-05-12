@@ -3,3 +3,6 @@ scripts/*.html
 
 # data
 *.csv
+
+# plots
+*.jpg
