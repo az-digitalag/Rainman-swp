@@ -1,5 +1,5 @@
+# html
+scripts/*.html
+
 # data
 *.csv
-
-# produced vignettes
-scripts/*.html
