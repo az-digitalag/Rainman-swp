@@ -3,6 +3,8 @@ title: "Explore half-hourly data"
 author: "Jessica Guo"
 date: "4/2/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -17,7 +19,7 @@ After relating daily mean soil water content and soil water potential, we now fo
 library(dplyr)
 library(ggplot2)
 library(RColorBrewer)
-library(plotly)
+library(lubridate)
 library(cowplot)
 ```
 
@@ -53,10 +55,54 @@ WC <- read.csv("../data/Halfhourly_VWC_Weather_030621.csv") %>%
   mutate(Period = case_when(date <= tm$en[1] & date >= tm$st[1] ~ tm$Period[1],
                             date <= tm$en[2] & date >= tm$st[2] ~ tm$Period[2],
                             date <= tm$en[3] & date >= tm$st[3] ~ tm$Period[3],
-                            date <= tm$en[4] & date >= tm$st[4] ~ tm$Period[4]))
+                            date <= tm$en[4] & date >= tm$st[4] ~ tm$Period[4]),
+         depth = Depth,
+         Depth = case_when(depth == 1 ~ "0-12 cm",
+                           depth == 2 ~ "25 cm",
+                           depth == 3 ~ "75 cm"),
+         year = year(dt),
+         week = isoweek(dt),
+         year_week = paste0(year, "_", week))
 
-
-ggplot(WC)
 ```
 
-Half-hourly data can be challenging to plot, so initial plots are created of daily mean/max/min. 
+Half-hourly data plots
+```{r, echo = FALSE, warning = FALSE}
+cols <- brewer.pal(11, "Spectral")
+yws <- unique(WC$year_week)
+for(yw in yws) {
+  # Subset data by week
+    sub <- WC %>%
+      filter(year_week == yw)
+    Year <- unique(sub$year)
+    
+    # Double axis plot
+    fig1 <- ggplot(sub, aes(x = dt)) +
+      geom_point(aes(y = SWP/1000, color = "SWP (MPa)"), size = 0.5) +
+      geom_point(aes(y = VWC*10-2, color = "VWC"), size = 0.5) +
+      facet_grid(rows = vars(Depth), cols = vars(Plot), scales = "free_y") +
+      scale_y_continuous(sec.axis = 
+                           sec_axis(~./10 + 0.2,
+                                    name = expression(paste(Theta, " (", m^3, " ", m^-3, ")")))) +
+      scale_color_manual(values = cols[c(2, 10)]) +
+      labs(y = expression(paste(Psi, " (MPa)")), x = "", title = Year) +
+      theme_bw(base_size = 12) +
+      theme(axis.title.y.left = element_text(color = cols[2]),
+            axis.title.y.right = element_text(color = cols[10])) +
+      guides(color = FALSE)
+    
+    fig2 <- ggplot(sub) +
+      geom_point(aes(x = VWC, y = SWP/1000, color = Depth), size = 0.5) +
+      facet_wrap(~Plot, ncol = 2) +
+      scale_color_manual(values = cols[c(3, 7, 9)]) +
+      labs(y = expression(paste(Psi, " (MPa)")), 
+           x = expression(paste(Theta, " (", m^3, " ", m^-3, ")"))) +
+      theme_bw(base_size = 12) +
+      guides(color = FALSE)
+    
+    jpeg(paste0("../plots/weekly/", yw, ".jpg"), height = 6, width = 6, 
+         units = "in", res = 600)
+    plot_grid(fig1, fig2, nrow = 2, rel_heights = c(2, 1))
+    dev.off()
+}
+```
