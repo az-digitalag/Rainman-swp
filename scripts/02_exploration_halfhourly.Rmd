@@ -104,19 +104,19 @@ for(yw in yws) {
       filter(year_week == yw)
     sub_irig <- irig_df %>%
       filter(year_week == yw & irig_tf == TRUE)
-    Year <- unique(sub$year)
-    Wk <- sprintf("%02d", unique(sub$week))
+    Year <- unique(sub_wc$year)
+    Wk <- sprintf("%02d", unique(sub_wc$week))
     
     # Calculate axis ratios
-    prop <- diff(range(sub$SWP))/diff(range(sub$VWC))
-    swp_min <- min(sub$SWP)
+    prop <- diff(range(sub_wc$SWP))/diff(range(sub_wc$VWC))
+    swp_min <- min(sub_wc$SWP)
     
     # Double axis plot
     if(nrow(sub_irig) == 0) {
       fig1 <- ggplot() +
       geom_point(data = sub_wc, aes(x = dt, y = SWP, color = "SWP (MPa)"), size = 0.5) +
       geom_point(data = sub_wc, aes(x = dt,y = VWC*prop + swp_min, color = "VWC"), size = 0.5) +
-      facet_grid(rows = vars(Depth), cols = vars(Plot), scales = "free_y") +
+      facet_grid(rows = vars(Depth), cols = vars(Plot)) +
       scale_x_datetime(date_labels = "%b %d") +
       scale_y_continuous(sec.axis = 
                            sec_axis(~./prop - swp_min/prop,
@@ -132,7 +132,7 @@ for(yw in yws) {
       geom_point(data = sub_irig, aes(x = dt, y = 0), pch = 8) +
       geom_point(data = sub_wc, aes(x = dt, y = SWP, color = "SWP (MPa)"), size = 0.5) +
       geom_point(data = sub_wc, aes(x = dt,y = VWC*prop + swp_min, color = "VWC"), size = 0.5) +
-      facet_grid(rows = vars(Depth), cols = vars(Plot), scales = "free_y") +
+      facet_grid(rows = vars(Depth), cols = vars(Plot)) +
       scale_x_datetime(date_labels = "%b %d") +
       scale_y_continuous(sec.axis = 
                            sec_axis(~./prop - swp_min/prop,
