@@ -52,7 +52,8 @@ WC <- read.csv("../data/Halfhourly_VWC_Weather_030621.csv") %>%
   filter(House == "3" & Plot %in% c("4", "7")) %>%
   tidyr::drop_na() %>%
   tidyr::pivot_wider(names_from = "Variable", values_from = "value") %>%
-  mutate(Period = case_when(date <= tm$en[1] & date >= tm$st[1] ~ tm$Period[1],
+  mutate(SWP = SWP/1000,
+         Period = case_when(date <= tm$en[1] & date >= tm$st[1] ~ tm$Period[1],
                             date <= tm$en[2] & date >= tm$st[2] ~ tm$Period[2],
                             date <= tm$en[3] & date >= tm$st[3] ~ tm$Period[3],
                             date <= tm$en[4] & date >= tm$st[4] ~ tm$Period[4]),
@@ -61,27 +62,64 @@ WC <- read.csv("../data/Halfhourly_VWC_Weather_030621.csv") %>%
                            depth == 2 ~ "25 cm",
                            depth == 3 ~ "75 cm"),
          year = year(dt),
+         week = isoweek(dt))
+
+# Isoweek 1 often spans 2 years, amend "year" column to the larger of the 2 years
+WC$year[which(WC$week == 1 & WC$Period == "Winter 2020")] <- 2020
+WC$year[which(WC$week == 1 & WC$Period == "Winter 2021")] <- 2021
+
+WC <- WC %>%
+  mutate(year_week = paste0(year, "_", week))
+```
+
+For plotting purposes, we also note when irrigation occurred. H3P4 received the S1 treatment, and H3P7 received the S4 treatment. 
+```{r}
+irig <- readr::read_csv("../data/irrigation.csv") %>%
+  mutate(dt = as.POSIXct(paste0(date, " 12:00:00"), tz = "America/Phoenix")) %>%
+  rename(Plot_4 = S1, Plot_7 = S4) %>%
+  tidyr::pivot_longer(!c(dt, date), 
+                      names_to = "Plot", 
+                      names_pattern = "Plot_(.*)") %>%
+  rename(irig_mm = value) %>%
+  mutate(irig_tf = ifelse(irig_mm > 0, TRUE, FALSE),
+         year = year(dt),
          week = isoweek(dt),
-         year_week = paste0(year, "_", week))
+         year_week = paste0(year, "_", week),)
+
+# Replicate 3 times with 3 depths
+irig_df <- do.call("rbind", replicate(3, irig, simplify = FALSE))
+irig_df$Depth <- c(rep("0-12 cm", nrow(irig)),
+                   rep("25 cm", nrow(irig)),
+                   rep("75 cm", nrow(irig)))
+
 ```
 
 Half-hourly data plots
 ```{r, warning = FALSE}
 cols <- brewer.pal(11, "Spectral")
-yws <- unique(WC$year_week)
+yws <- unique(WC$year_week) # 72
 for(yw in yws) {
   # Subset data by week
-    sub <- WC %>%
+    sub_wc <- WC %>%
       filter(year_week == yw)
+    sub_irig <- irig_df %>%
+      filter(year_week == yw & irig_tf == TRUE)
     Year <- unique(sub$year)
+    Wk <- sprintf("%02d", unique(sub$week))
+    
+    # Calculate axis ratios
+    prop <- diff(range(sub$SWP))/diff(range(sub$VWC))
+    swp_min <- min(sub$SWP)
     
     # Double axis plot
-    fig1 <- ggplot(sub, aes(x = dt)) +
-      geom_point(aes(y = SWP/1000, color = "SWP (MPa)"), size = 0.5) +
-      geom_point(aes(y = VWC*10-2, color = "VWC"), size = 0.5) +
+    if(nrow(sub_irig) == 0) {
+      fig1 <- ggplot() +
+      geom_point(data = sub_wc, aes(x = dt, y = SWP, color = "SWP (MPa)"), size = 0.5) +
+      geom_point(data = sub_wc, aes(x = dt,y = VWC*prop + swp_min, color = "VWC"), size = 0.5) +
       facet_grid(rows = vars(Depth), cols = vars(Plot), scales = "free_y") +
+      scale_x_datetime(date_labels = "%b %d") +
       scale_y_continuous(sec.axis = 
-                           sec_axis(~./10 + 0.2,
+                           sec_axis(~./prop - swp_min/prop,
                                     name = expression(paste(Theta, " (", m^3, " ", m^-3, ")")))) +
       scale_color_manual(values = cols[c(2, 10)]) +
       labs(y = expression(paste(Psi, " (MPa)")), x = "", title = Year) +
@@ -89,9 +127,27 @@ for(yw in yws) {
       theme(axis.title.y.left = element_text(color = cols[2]),
             axis.title.y.right = element_text(color = cols[10])) +
       guides(color = FALSE)
+    } else {
+      fig1 <- ggplot() +
+      geom_point(data = sub_irig, aes(x = dt, y = 0), pch = 8) +
+      geom_point(data = sub_wc, aes(x = dt, y = SWP, color = "SWP (MPa)"), size = 0.5) +
+      geom_point(data = sub_wc, aes(x = dt,y = VWC*prop + swp_min, color = "VWC"), size = 0.5) +
+      facet_grid(rows = vars(Depth), cols = vars(Plot), scales = "free_y") +
+      scale_x_datetime(date_labels = "%b %d") +
+      scale_y_continuous(sec.axis = 
+                           sec_axis(~./prop - swp_min/prop,
+                                    name = expression(paste(Theta, " (", m^3, " ", m^-3, ")")))) +
+      scale_color_manual(values = cols[c(2, 10)]) +
+      labs(y = expression(paste(Psi, " (MPa)")), x = "", title = Year) +
+      theme_bw(base_size = 12) +
+      theme(axis.title.y.left = element_text(color = cols[2]),
+            axis.title.y.right = element_text(color = cols[10])) +
+      guides(color = FALSE)
+    }
     
-    fig2 <- ggplot(sub) +
-      geom_point(aes(x = VWC, y = SWP/1000, color = Depth), size = 0.5) +
+    
+    fig2 <- ggplot(sub_wc) +
+      geom_point(aes(x = VWC, y = SWP, color = Depth), size = 0.5) +
       facet_wrap(~Plot, ncol = 2) +
       scale_color_manual(values = cols[c(3, 7, 9)]) +
       labs(y = expression(paste(Psi, " (MPa)")), 
@@ -99,8 +155,9 @@ for(yw in yws) {
       theme_bw(base_size = 12) +
       guides(color = FALSE)
 
-    ggsave2(paste0("../plots/weekly/", yw, ".jpg"),
-            plot = plot_grid(fig1, fig2, nrow = 2, rel_heights = c(2, 1)),                             height = 6, width = 6, units = "in")
+    ggsave2(paste0("../plots/weekly/", Year, "_", Wk, ".jpg"),
+            plot = plot_grid(fig1, fig2, nrow = 2, rel_heights = c(2, 1)),                             
+            height = 6, width = 6, units = "in")
 
     
     print(paste0("Done with ", yw))
