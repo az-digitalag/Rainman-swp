@@ -2,10 +2,16 @@
 scripts/*.html
 
 # data
+data/
 *.csv
 
 # plots
 *.jpg
-.Rproj.user
 
+# R project files
+.Rproj.user
+*.Rhistory
 *.Rproj
+
+# Subfolders from knitting .Rmds
+scripts/01_exporation_daily_files/
