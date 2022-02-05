@@ -6,3 +6,6 @@ scripts/*.html
 
 # plots
 *.jpg
+.Rproj.user
+
+*.Rproj
