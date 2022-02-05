@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Soil data from RainMan SR
 
-This project uses soil volumentric water content (VWC) and temperature (Ts) data from the RainManSR project to predict soil water potential (SWP), which is available from a subset of plots/treatments. The project goals are two-fold: 1) to extract Van Genuchten model parameters for use in predicting SWP mechanistically, using model such as Hydrus 1D, and 2) to develop a statistical model of SWP using VWC in a hierarhical Bayesian framework and predict the missing values of SWP for other plots/treatments. 
+This project uses soil volumetric water content (VWC) and temperature (Ts) data from the RainManSR project to predict soil water potential (SWP), which is available from a subset of plots/treatments. The project goals are two-fold: 1) to extract Van Genuchten model parameters for use in predicting SWP mechanistically, using model such as Hydrus 1D, and 2) to develop a statistical model of SWP using VWC in a hierarchical Bayesian framework and predict the missing values of SWP for other plots/treatments. 
 
 ```{r}
 library(xts)
@@ -22,7 +22,9 @@ library(ggplot2)
 library(RColorBrewer)
 library(plotly)
 library(cowplot)
-source("../source/VPD.R")
+library(xts)
+library(dygraphs)
+library(plantecophys)
 ```
 
 ## Data exploration
@@ -64,8 +66,8 @@ Ta <- read.csv("../data/Halfhourly_VWC_Weather_030621.csv") %>%
          date = as.Date(TIMESTAMP),
          T_inside = ifelse(T_inside < -10, NA, T_inside),
          T_outside = ifelse(T_outside < -10, NA, T_outside),
-         D_inside = VPD(RH_inside/100, T_inside),
-         D_outside = VPD(RH_outside/100, T_outside)) %>%
+         D_inside = RHtoVPD(RH_inside, T_inside),
+         D_outside = RHtoVPD(RH_outside, T_outside)) %>%
   rename(dt = TIMESTAMP) %>%
   tidyr::pivot_longer(!c(dt, date), 
                       names_to = c("Variable", "Location"), 
@@ -75,7 +77,7 @@ Ta <- read.csv("../data/Halfhourly_VWC_Weather_030621.csv") %>%
 
 Half-hourly data can be challenging to plot, so initial plots are created of daily mean/max/min.  
 
-First, Ts at each of 28 house/plot combinations. Each house has 12 plots, of which 5 were instrumented in houses 1 and 5, 3 were instrumented in houses 2 and 4, and all 12 were instrumented in house 3. Of the instrumented plots, all 5 in houses 1 and 5 and 5 of 12 plots in house 3 were instrumented for all 3 depths. The remaininbg plots were only instrumented at the shallow (0-12 cm) depth. 
+First, Ts at each of 28 house/plot combinations. Each house has 12 plots, of which 5 were instrumented in houses 1 and 5, 3 were instrumented in houses 2 and 4, and all 12 were instrumented in house 3. Of the instrumented plots, all 5 in houses 1 and 5 and 5 of 12 plots in house 3 were instrumented for all 3 depths. The remaining plots were only instrumented at the shallow (0-12 cm) depth. 
 ```{r, echo = FALSE}
 # Soil temperature
 Ts_daily <- Ts %>%
@@ -311,8 +313,8 @@ P4_right <- ggplot(filter(SW_wide, plotID == "3_4"),
         strip.background = element_blank(),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
-  guides(color = FALSE,
-         shape = FALSE)
+  guides(color = "none",
+         shape = "none")
 P7_left <- ggplot(filter(SW_wide, plotID == "3_7"),
                   aes(x = WP_mean, y = WC_mean, col = Depth)) +
   geom_errorbar(aes(ymin = WC_min, ymax = WC_max), alpha = 0.2) +
@@ -343,8 +345,8 @@ P7_right <- ggplot(filter(SW_wide, plotID == "3_7"),
         strip.background = element_blank(),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
-  guides(color = FALSE,
-         shape = FALSE)
+  guides(color = "none",
+         shape = "none")
 
 jpeg("../plots/3_4_byseason_daily.jpg", width = 6, height = 8, 
      units = "in", res = 600)
@@ -355,4 +357,12 @@ jpeg("../plots/3_7_byseason_daily.jpg", width = 6, height = 8,
      units = "in", res = 600)
 plot_grid(P7_left, P7_right, ncol = 2)
 dev.off()
+```
+
+Save out daily tables as .Rdata files for future use in Shiny app. 
+```{r}
+save(Ts_daily, file = "../data/soilTempDaily.Rdata")
+save(WC_daily, file = "../data/soilWaterContentDaily.Rdata")
+save(WP_daily, file = "../data/soilWaterPotentialDaily.Rdata")
+save(Ta_daily, file = "../data/weatherVariablesDaily.Rdata")
 ```
