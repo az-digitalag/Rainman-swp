@@ -365,4 +365,5 @@ save(Ts_daily, file = "../data/soilTempDaily.Rdata")
 save(WC_daily, file = "../data/soilWaterContentDaily.Rdata")
 save(WP_daily, file = "../data/soilWaterPotentialDaily.Rdata")
 save(Ta_daily, file = "../data/weatherVariablesDaily.Rdata")
+save(SW_long, file = "../data/soilWC-WPDaily.Rdata")
 ```
