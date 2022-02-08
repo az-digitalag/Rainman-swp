@@ -21,32 +21,48 @@ ui <- navbarPage("RainManSR",
            # Sidebar with drop down input for House number
            sidebarLayout(
              sidebarPanel(
+               # Select House
                selectInput(inputId = "House",
                            label = "Select House",
                            choices = levels(Ts_daily$House)),
+               # Select Plot
                selectInput(inputId = "Plot",
                            label = "Select Plot",
-                           choices = levels(Ts_daily$Plot))
+                           choices = levels(Ts_daily$Plot)),
+               # Select range of dates
+               sliderInput("slider1", label = h3("Date Range"), 
+                           min = min(Ts_daily$date), 
+                           max = max(Ts_daily$date), 
+                           value = range(Ts_daily$date)
+               ),
              ),
              # Show a size plot for selected species
              mainPanel(
-               fluidRow(plotOutput("soilTempTimeseries", width = "800px", height = "150px")),
-               fluidRow(plotOutput("soilVWCTimeseries", width = "800px", height = "150px")),
-               fluidRow(plotOutput("soilWPTimeseries", width = "800px", height = "150px"))
+               fluidRow(plotOutput("soilTempTimeseries", width = "100%", height = "250px")),
+               fluidRow(plotOutput("soilVWCTimeseries", width = "100%", height = "250px")),
+               fluidRow(plotOutput("soilWPTimeseries", width = "100%", height = "250px"))
              )
            )),
   tabPanel("Comparison SWP-SWC",
            titlePanel("House 3"),
            sidebarLayout(
              sidebarPanel(
+               # Select Plot from House 3
                selectInput(inputId = "Plot1",
                            label = "Select Plot",
-                           choices = unique(SW_long$Plot))
+                           choices = unique(SW_long$Plot)),
+               # Select range of dates
+               sliderInput("slider2", label = h3("Date Range"), 
+                           min = min(SW_long$date), 
+                           max = max(SW_long$date), 
+                           value = range(SW_long$date)
+               ),
              ),
+             
              # Show a size plot for selected species
              mainPanel(
-               fluidRow(plotOutput("SWCSWP_ts", width = "800px", height = "300px")),
-               fluidRow(plotOutput("SWCSWP_scatter", width = "750px", height = "250px"))
+               fluidRow(plotOutput("SWCSWP_ts", width = "100%", height = "500px")),
+               fluidRow(plotOutput("SWCSWP_scatter", width = "100%", height = "250px"))
              )
            ))
   
@@ -58,14 +74,16 @@ server <- function(input, output) {
   output$soilTempTimeseries <- renderPlot({
     Ts_daily %>%
       filter(House == input$House,
-             Plot == input$Plot) %>%
+             Plot == input$Plot,
+             date >= input$slider1[1],
+             date <= input$slider1[2]) %>%
       ggplot(mapping = aes(x = date, y = Ts_mean, color = Depth)) +
       geom_errorbar(aes(ymin = Ts_min, ymax = Ts_max), width = 0, alpha = 0.2) +
       geom_point(size = 0.25) +
       scale_y_continuous(expression(paste(T[soil], " (", degree, "C)"))) +
       scale_x_date(date_labels = "%b",
                    date_breaks = "2 months") +
-      theme_bw(base_size = 12) +
+      theme_bw(base_size = 16) +
       scale_color_manual(labels = c("0-12 cm", "25 cm", "75 cm"), 
                          values = c("#8C510A", "#BF812D", "#DFC27D")) +
       theme(axis.title.x = element_blank(),
@@ -77,14 +95,16 @@ server <- function(input, output) {
   output$soilVWCTimeseries <- renderPlot({
     WC_daily %>%
       filter(House == input$House,
-             Plot == input$Plot) %>%
+             Plot == input$Plot,
+             date >= input$slider1[1],
+             date <= input$slider1[2]) %>%
       ggplot(mapping = aes(x = date, y = WC_mean, color = Depth)) +
       geom_errorbar(aes(ymin = WC_min, ymax = WC_max), width = 0, alpha = 0.2) +
       geom_point(size = 0.25) +
       scale_y_continuous(expression(paste(Theta[soil], "( ", m^3, " ", m^-3, ")"))) +
       scale_x_date(date_labels = "%b",
                    date_breaks = "2 months") + 
-      theme_bw(base_size = 12) +
+      theme_bw(base_size = 16) +
       scale_color_manual(labels = c("0-12 cm", "25 cm", "75 cm"), 
                          values = c("#9E0142", "#D53E4F", "#F46D43")) +
       theme(axis.title.x = element_blank(),
@@ -96,14 +116,16 @@ server <- function(input, output) {
   output$soilWPTimeseries <- renderPlot({
     WP_daily %>%
       filter(House == input$House,
-             Plot == input$Plot) %>%
+             Plot == input$Plot,
+             date >= input$slider1[1],
+             date <= input$slider1[2]) %>%
       ggplot(mapping = aes(x = date, y = WP_mean/1000, color = Depth)) +
       geom_errorbar(aes(ymin = WP_min/1000, ymax = WP_max/1000), width = 0, alpha = 0.2) +
       geom_point(size = 0.25) +
       scale_y_continuous(expression(paste(Psi[soil], " (MPa)"))) +
       scale_x_date(date_labels = "%b",
                    date_breaks = "2 months") + 
-      theme_bw(base_size = 12) +
+      theme_bw(base_size = 16) +
       scale_color_manual(labels = c("0-12 cm", "25 cm", "75 cm"), 
                          values = c("#5E4FA2", "#3288BD", "#66C2A5")) +
       theme(axis.title.x = element_blank(),
@@ -115,7 +137,9 @@ server <- function(input, output) {
   
   output$SWCSWP_ts <- renderPlot({
     SW_long %>%
-      filter(Plot == input$Plot1) %>%
+      filter(Plot == input$Plot1,
+             date >= input$slider2[1],
+             date <= input$slider2[2]) %>%
       ggplot(mapping = aes(x = date, y = mean, color = Depth)) +
       geom_errorbar(aes(ymin = min, ymax = max), width = 0, alpha = 0.2) +
       geom_point(size = 0.25) +
@@ -125,7 +149,7 @@ server <- function(input, output) {
                  ncol = 1) +
       scale_x_date(date_labels = "%b",
                    date_breaks = "2 months") + 
-      theme_bw(base_size = 12) +
+      theme_bw(base_size = 16) +
       scale_color_manual(labels = c("0-12 cm", "25 cm", "75 cm"), 
                          values = c("#5E4FA2", "#3288BD", "#66C2A5")) +
       theme(axis.title.x = element_blank(),
@@ -137,7 +161,9 @@ server <- function(input, output) {
   
   output$SWCSWP_scatter <- renderPlot({
     SW_long %>%
-      filter(Plot == input$Plot1) %>%
+      filter(Plot == input$Plot1,
+             date >= input$slider2[1],
+             date <= input$slider2[2]) %>%
       select(-var) %>%
       tidyr::pivot_wider(names_from = Variable,
                          values_from = 8:10) %>%
@@ -150,7 +176,7 @@ server <- function(input, output) {
       facet_wrap(~Depth, 
                  scales = "free",
                  ncol = 3) +
-      theme_bw(base_size = 12) +
+      theme_bw(base_size = 16) +
       scale_color_manual(labels = c("0-12 cm", "25 cm", "75 cm"), 
                          values = c("#5E4FA2", "#3288BD", "#66C2A5")) +
       theme(strip.background = element_blank(),
