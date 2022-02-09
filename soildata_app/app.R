@@ -6,13 +6,13 @@
 #
 #    http://shiny.rstudio.com/
 #
-
+library(tidyverse)
 library(shiny)
 library(ggplot2)
-load("../data/soilTempDaily.Rdata")
-load("../data/soilWaterContentDaily.Rdata")
-load("../data/soilWaterPotentialDaily.Rdata")
-load("../data/soilWC-WPDaily.Rdata")
+load("soilTempDaily.Rdata")
+load("soilWaterContentDaily.Rdata")
+load("soilWaterPotentialDaily.Rdata")
+load("soilWC-WPDaily.Rdata")
 
 # Define UI for application with two tabs
 ui <- navbarPage("RainManSR",
@@ -142,7 +142,7 @@ server <- function(input, output) {
              date <= input$slider2[2]) %>%
       ggplot(mapping = aes(x = date, y = mean, color = Depth)) +
       geom_errorbar(aes(ymin = min, ymax = max), width = 0, alpha = 0.2) +
-      geom_point(size = 0.25) +
+      geom_point(size = 1) +
       facet_wrap(~var, 
                  labeller = labeller(var = label_parsed),
                  scales = "free_y",
@@ -168,7 +168,7 @@ server <- function(input, output) {
       tidyr::pivot_wider(names_from = Variable,
                          values_from = 8:10) %>%
       ggplot(mapping = aes(x = mean_WC, y = mean_WP, color = Depth)) +
-      geom_point(size = 0.25) +
+      geom_point(size = 1) +
       geom_errorbar(aes(ymin = min_WP, ymax = max_WP), width = 0, alpha = 0.2) +
       geom_errorbarh(aes(xmin = min_WC, xmax = max_WC), height = 0, alpha = 0.2) +
       scale_y_continuous(expression(paste(Psi, " (MPa)"))) +
