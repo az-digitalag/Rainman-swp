@@ -361,9 +361,9 @@ dev.off()
 
 Save out daily tables as .Rdata files for future use in Shiny app. 
 ```{r}
-save(Ts_daily, file = "../data/soilTempDaily.Rdata")
-save(WC_daily, file = "../data/soilWaterContentDaily.Rdata")
-save(WP_daily, file = "../data/soilWaterPotentialDaily.Rdata")
+save(Ts_daily, file = "../soildata_app/soilTempDaily.Rdata")
+save(WC_daily, file = "../soildata_app/soilWaterContentDaily.Rdata")
+save(WP_daily, file = "../soildata_app/soilWaterPotentialDaily.Rdata")
 save(Ta_daily, file = "../data/weatherVariablesDaily.Rdata")
-save(SW_long, file = "../data/soilWC-WPDaily.Rdata")
+save(SW_long, file = "../soildata_app/soilWC-WPDaily.Rdata")
 ```
