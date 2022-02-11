@@ -27,7 +27,7 @@ ui <- navbarPage("RainManSR",
                            choices = levels(Ts_daily$House)),
                # Select Plot
                selectInput(inputId = "Plot",
-                           label = "Select House", 
+                           label = "Select Plot", 
                            choices = ""),
                # Select range of dates
                sliderInput("slider1", label = h3("Date Range"), 
@@ -72,7 +72,14 @@ ui <- navbarPage("RainManSR",
 server <- function(input, output) {
   
   observeEvent(input$House,{  
-    temp <- as.vector(unlist(unique(Ts_daily[Ts_daily$House==input$House,"Plot"])))
+    temp <- Ts_daily %>%
+      group_by(House) %>%
+      summarize(Plot = unique(Plot)) %>%
+      filter(House == input$House) %>%
+      arrange(Plot) %>%
+      ungroup() %>%
+      pull(Plot)
+
     updateSelectInput(inputId = "Plot",
                       choices = temp)
   }
