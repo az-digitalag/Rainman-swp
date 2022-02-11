@@ -27,8 +27,8 @@ ui <- navbarPage("RainManSR",
                            choices = levels(Ts_daily$House)),
                # Select Plot
                selectInput(inputId = "Plot",
-                           label = "Select Plot",
-                           choices = levels(Ts_daily$Plot)),
+                           label = "Select House", 
+                           choices = ""),
                # Select range of dates
                sliderInput("slider1", label = h3("Date Range"), 
                            min = min(Ts_daily$date), 
@@ -70,6 +70,13 @@ ui <- navbarPage("RainManSR",
 
 # Create timeseries plot for swc and swp on same panel
 server <- function(input, output) {
+  
+  observeEvent(input$House,{  
+    temp <- as.vector(unlist(unique(Ts_daily[Ts_daily$House==input$House,"Plot"])))
+    updateSelectInput(inputId = "Plot",
+                      choices = temp)
+  }
+  )
   
   output$soilTempTimeseries <- renderPlot({
     Ts_daily %>%
