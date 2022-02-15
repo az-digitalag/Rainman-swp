@@ -23,7 +23,7 @@ library(lubridate)
 library(cowplot)
 ```
 
-## Half-hourly ata exploration
+## Half-hourly data exploration
 
 As before, we load in the half-hourly time series data for VWC, which contains VWC and WP. We match VWC and VWP up for the S1-S4 period, including only plots 3_4 and 3_7. 
 
@@ -91,6 +91,10 @@ irig_df <- do.call("rbind", replicate(3, irig, simplify = FALSE))
 irig_df$Depth <- c(rep("0-12 cm", nrow(irig)),
                    rep("25 cm", nrow(irig)),
                    rep("75 cm", nrow(irig)))
+
+
+save(WC, file = "../soildata_app/soilWC-WPHourly.Rdata")
+save(irig_df, file = "../soildata_app/irrigDaily.Rdata")
 
 ```
 
