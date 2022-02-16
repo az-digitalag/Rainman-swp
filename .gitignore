@@ -17,3 +17,6 @@ data/
 # Subfolders from knitting .Rmds
 scripts/01_exporation_daily_files/
 soildata_app/rsconnect/
+
+# Documents folder
+docs/
