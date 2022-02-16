@@ -9,28 +9,43 @@
 library(tidyverse)
 library(shiny)
 library(ggplot2)
+
+# First tab
 load("soilTempDaily.Rdata")
 load("soilWaterContentDaily.Rdata")
-load("soilWaterPotentialDaily.Rdata")
+load("airTempDaily.Rdata")
+load("irrigationDaily.Rdata")
+load("season.Rdata")
+
+
 load("soilWC-WPDaily.Rdata")
+load("soilWC-WPHourly.Rdata") # WC
 
 # Define UI for application with two tabs
 ui <- navbarPage("RainManSR",
   tabPanel("Daily time series",
            titlePanel("Daily Soil variables"),
-           # Sidebar with drop down input for House number
+           # Sidebar with drop down input for treatments, times, and date ranges
            sidebarLayout(
              sidebarPanel(
-               # Select House
-               selectInput(inputId = "House",
-                           label = "Select House",
-                           choices = levels(Ts_daily$House)),
-               # Select Plot
-               selectInput(inputId = "Plot",
-                           label = "Select Plot", 
+               # Select Summer treatment
+               selectInput(inputId = "Summer",
+                           label = "Select summer treatment",
+                           choices = unique(Ts_daily$Summer)),
+               # Select Winter treatment
+               selectInput(inputId = "Winter",
+                           label = "Select winter treatment",
+                           choices = unique(Ts_daily$Winter)),
+               # Select Year
+               selectInput(inputId = "Year",
+                           label = "Select hydrological year", 
+                           choices = unique(season$Year)),
+               # Select Season
+               selectInput(inputId = "Season",
+                           label = "Select season", 
                            choices = ""),
                # Select range of dates
-               sliderInput("slider1", label = h3("Date Range"), 
+               sliderInput("slider1", label = h3("Date range"), 
                            min = min(Ts_daily$date), 
                            max = max(Ts_daily$date), 
                            value = range(Ts_daily$date)
@@ -43,7 +58,7 @@ ui <- navbarPage("RainManSR",
                fluidRow(plotOutput("soilWPTimeseries", width = "100%", height = "250px"))
              )
            )),
-  tabPanel("Comparison SWP-SWC",
+  tabPanel("Daily SWP-SWC",
            titlePanel("House 3"),
            sidebarLayout(
              sidebarPanel(
@@ -65,23 +80,53 @@ ui <- navbarPage("RainManSR",
                fluidRow(plotOutput("SWCSWP_scatter", width = "100%", height = "250px"))
              )
            ))
+  # tabPanel("Hourly SWP-SWC",
+  #          titlePanel("House 3"),
+  #          sidebarLayout(
+  #            sidebarPanel(
+  #              # Select Plot from House 3
+  #              selectInput(inputId = "Plot2",
+  #                          label = "Select Plot",
+  #                          choices = unique(WC$Plot)),
+  #              # Select range of dates
+  #              sliderInput("slider3", label = h3("Date/time Range"), 
+  #                          min = min(WC$dt), 
+  #                          max = max(WC$dt), 
+  #                          value = range(WC$dt),
+  #                          step = 60*30
+  #              ),
+  #            ),
+  #            
+  #            # Show a size plot for selected species
+  #            mainPanel(
+  #              fluidRow(plotOutput("SWCSWP_ts_hourly", width = "100%", height = "500px")),
+  #              fluidRow(plotOutput("SWCSWP_scatter_hourly", width = "100%", height = "250px"))
+  #            )
+  #          ))
   
 )
 
 # Create timeseries plot for swc and swp on same panel
 server <- function(input, output) {
   
-  observeEvent(input$House,{  
-    temp <- Ts_daily %>%
-      group_by(House) %>%
-      summarize(Plot = unique(Plot)) %>%
-      filter(House == input$House) %>%
-      arrange(Plot) %>%
-      ungroup() %>%
-      pull(Plot)
+  observeEvent(input$Year,{  
+    temp <- season %>%
+      filter(Year == input$Year) %>%
+      pull(Season)
 
-    updateSelectInput(inputId = "Plot",
+    updateSelectInput(inputId = "Season",
                       choices = temp)
+  }
+  )
+  
+  observeEvent(input$Season,{  
+    temp <- season %>%
+      filter(Year == input$Year,
+             Season == input$Season) 
+    
+    updateSliderInput(inputId = "slider1",
+                      min = temp$st, 
+                      max = temp$en)
   }
   )
   
