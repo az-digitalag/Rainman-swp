@@ -22,7 +22,8 @@ season <- data.frame(Year = c(rep(2020, 2),
                             rep(c("01-31", "04-30", "06-30", "10-31"), 1))) %>%
   mutate(en = as.Date(paste0(Year, "-", en)),
          st = case_when(Season == "Winter" ~ as.Date(paste0(as.numeric(Year) - 1, "-", st)),
-                        Season %in% c("Spring", "Premonsoon", "Growing") ~ as.Date(paste0(Year, "-", st)))) %>%
+                        Season %in% c("Spring", "Premonsoon", "Growing") ~ as.Date(paste0(Year, "-", st))),
+         Season = factor(Season, levels = c("Winter", "Spring", "Premonsoon", "Growing"))) %>%
   as_tibble()
 
 
