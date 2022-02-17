@@ -73,7 +73,11 @@ Ta <- read.csv("data/Halfhourly_VWC_Weather_030621.csv") %>%
   arrange(Variable, Location, dt)
 
 # Read in irrigation dates
-irig <- read_csv("data/irrigation.csv")
+irig <- read_csv("data/irrigation.csv") %>%
+  tidyr::pivot_longer(-date, 
+                      names_to = "Treatment", 
+                      values_to = "irrigation_mm") %>%
+  mutate(date = as.Date(date, format = "%m/%d/%Y"))
 
 
 # Summarize half-hourly variables to daily
