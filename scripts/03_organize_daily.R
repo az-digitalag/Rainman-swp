@@ -9,7 +9,9 @@ library(plantecophys)
 library(fuzzyjoin)
 
 # Read in treatments for each house/plot combination
-treats <- read.csv("data/treatments.csv")
+treats <- read.csv("data/treatments.csv") %>%
+  mutate(Summer = factor(Summer, levels = c("S1", "S2", "S3", "S4")),
+         Winter = factor(Winter, levels = c("W1", "W2", "W3")))
 
 # Label with Hydrologic year and season
 season <- data.frame(Year = c(rep(2020, 2),
@@ -75,7 +77,7 @@ Ta <- read.csv("data/Halfhourly_VWC_Weather_030621.csv") %>%
 # Read in irrigation dates
 irig <- read_csv("data/irrigation.csv") %>%
   tidyr::pivot_longer(-date, 
-                      names_to = "Treatment", 
+                      names_to = "Summer", 
                       values_to = "irrigation_mm") %>%
   mutate(date = as.Date(date, format = "%m/%d/%Y"))
 
