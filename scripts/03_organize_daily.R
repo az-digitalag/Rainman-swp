@@ -154,3 +154,36 @@ save(WC_daily, file = "soildata_app/soilWaterContentDaily.Rdata")
 save(Ta_daily, file = "soildata_app/airTempDaily.Rdata")
 save(irig, file = "soildata_app/irrigationDaily.Rdata")
 save(season, file = "soildata_app/season.Rdata")
+
+
+##### Match SWP to SWC #####
+
+
+WP_daily <- WC %>%
+  filter(Variable == "SWP") %>%
+  group_by(ID, date) %>%
+  summarise(WP_mean = mean(value/1000, na.rm = TRUE),
+            WP_min = min(value/1000, na.rm = TRUE),
+            WP_max = max(value/1000, na.rm = TRUE),
+            House = unique(House),
+            Depth = unique(Depth),
+            Plot = unique(Plot),
+            Summer = unique(Summer),
+            Winter = unique(Winter)) %>%
+  mutate(plotID = paste0(House, "_", Plot),
+         WP_min = ifelse(!is.finite(WP_min), NA, WP_min),
+         WP_max = ifelse(!is.finite(WP_max), NA, WP_max)) %>%
+  ungroup()%>%
+  fuzzy_left_join(season, 
+                  by = c("date" = "st",
+                         "date" = "en"),
+                  match_fun = list(`>=`, `<=`)) %>%
+  select(-st, -en)%>%
+  filter(!is.na(Season))
+
+WPWC_daily <- WP_daily %>%
+  left_join(select(WC_daily, -ID))
+
+# Write out wide .Rdata files to soildata_app/ folder
+# Intended for second panel of app
+save(WPWC_daily, file = "soildata_app/soilWPWCDaily.Rdata")
