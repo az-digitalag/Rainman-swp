@@ -48,7 +48,7 @@ ui <- navbarPage("RainManSR",
                sliderInput("slider1", label = h3("Date range"), 
                            min = min(Ts_daily$date), 
                            max = max(Ts_daily$date), 
-                           value = range(Ts_daily$date)
+                           value = ""
                ),
              ),
              # Show a size plot for selected species
@@ -125,8 +125,7 @@ server <- function(input, output) {
              Season == input$Season) 
     
     updateSliderInput(inputId = "slider1",
-                      min = temp$st, 
-                      max = temp$en)
+                      value = c(temp$st, temp$en))
   }
   )
   
