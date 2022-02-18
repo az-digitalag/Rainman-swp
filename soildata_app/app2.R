@@ -9,6 +9,7 @@
 library(tidyverse)
 library(shiny)
 library(ggplot2)
+library(ggthemes)
 library(cowplot)
 
 # First tab: Seasonal timeseries by treatment
@@ -43,11 +44,32 @@ ui <- navbarPage("RainManSR",
                # Select Season
                uiOutput("dyn_season"),
                # Select range of dates
+               uiOutput("dyn_slider1")
+             ),
+             # Show a size plot for selected species
+             mainPanel(
+               fluidRow(plotOutput("seasonal_ts", width = "100%", height = "800px"))
+             )
+           )),
+  tabPanel("Compare treatments",
+           titlePanel("SWC by treatment"),
+           # Sidebar with drop down input for treatments, times, and date ranges
+           sidebarLayout(
+             sidebarPanel(
+               # Select treatment
+               selectInput(inputId = "Treatment",
+                           label = "Select treatment",
+                           choices = c("Summer", "Winter")),
+               # Select Year
+               selectInput(inputId = "Year",
+                           label = "Select hydrological year", 
+                           choices = unique(season$Year)),
+               # Select range of dates
                uiOutput("dyn_slider")
              ),
              # Show a size plot for selected species
              mainPanel(
-               fluidRow(plotOutput("seasonal_ts", width = "100%", height = "500px"))
+               fluidRow(plotOutput("treatment_ts", width = "100%", height = "800px"))
              )
            )),
   tabPanel("Compare SWP-SWC",
@@ -69,37 +91,25 @@ ui <- navbarPage("RainManSR",
              # Show a size plot for selected species
              mainPanel(
                fluidRow(plotOutput("WPWC_ts", width = "100%", height = "500px")),
-               fluidRow(plotOutput("WPWC_scatter", width = "750px", height = "250px"))
+               fluidRow(plotOutput("WPWC_scatter", width = "900px", height = "300px"))
              )
            ))
-  # tabPanel("Hourly SWP-SWC",
-  #          titlePanel("House 3"),
-  #          sidebarLayout(
-  #            sidebarPanel(
-  #              # Select Plot from House 3
-  #              selectInput(inputId = "Plot2",
-  #                          label = "Select Plot",
-  #                          choices = unique(WC$Plot)),
-  #              # Select range of dates
-  #              sliderInput("slider3", label = h3("Date/time Range"), 
-  #                          min = min(WC$dt), 
-  #                          max = max(WC$dt), 
-  #                          value = range(WC$dt),
-  #                          step = 60*30
-  #              ),
-  #            ),
-  #            
-  #            # Show a size plot for selected species
-  #            mainPanel(
-  #              fluidRow(plotOutput("SWCSWP_ts_hourly", width = "100%", height = "500px")),
-  #              fluidRow(plotOutput("SWCSWP_scatter_hourly", width = "100%", height = "250px"))
-  #            )
-  #          ))
-  
 )
 
 # Create timeseries plot for swc and swp on same panel
 server <- function(input, output) {
+  
+  # Render a UI for selecting date range, landing page
+  output$dyn_slider <- renderUI({
+    temp <- season %>%
+      filter(Year == input$Year)
+    sliderInput(inputId = "date_range_selector", 
+                label = "Select Date Range", 
+                min = min(temp$st),
+                max = max(temp$en),
+                value = c(min(temp$st),
+                          max(temp$en)))
+  })
   
   # Render a UI for selecting Season
   output$dyn_season <- renderUI({
@@ -113,11 +123,11 @@ server <- function(input, output) {
   })
   
   # Render a UI for selecting date range, tab 1
-  output$dyn_slider <- renderUI({
+  output$dyn_slider1 <- renderUI({
     temp <- season %>%
       filter(Year == input$Year,
              Season == input$Season)
-    sliderInput(inputId = "date_range_selector", 
+    sliderInput(inputId = "date_range_selector1", 
                 label = "Select Date Range", 
                 min = temp$st,
                 max = temp$en,
@@ -137,13 +147,81 @@ server <- function(input, output) {
                           max(temp$en)))
   })
 
+  
+  output$treatment_ts <- renderPlot({
+    temp_irig <- irig %>%
+      filter(date >= input$date_range_selector[1],
+             date <= input$date_range_selector[2])
+    
+    temp_VWC <- WC_daily %>%
+      filter(date >= input$date_range_selector[1],
+             date <= input$date_range_selector[2]) %>%
+      tidyr::pivot_longer(cols = Summer:Winter,
+                          names_to = "treatType",
+                          values_to = "Treatment") %>%
+      filter(treatType == input$Treatment) %>%
+      group_by(Treatment, date, Depth) %>%
+      summarize(mean_WC_mean = mean(WC_mean),
+                mean_WC_min = mean(WC_min),
+                mean_WC_max = mean(WC_max)) %>%
+      mutate(depth_labs = case_when(Depth == 1 ~ "0-12 cm",
+                                    Depth == 2 ~ "25 cm",
+                                    Depth == 3 ~ "75 cm"))
+    
+    fig_WC <- ggplot(temp_VWC, aes(x = date, y = mean_WC_mean, color = Treatment)) + #
+      geom_errorbar(aes(ymin = mean_WC_min,
+                        ymax = mean_WC_max),
+                    width = 0, 
+                    alpha = 0.3) +
+      geom_point(size = 3) +
+      scale_y_continuous(expression(paste(Theta[soil], "( ", m^3, " ", m^-3, ")"))) +
+      scale_x_date(date_labels = "%b %d",
+                   date_breaks = "1 month") +
+      scale_color_canva(palette = "Warm naturals") +
+      facet_wrap(~depth_labs,
+                 ncol = 1,
+                 scale = "free_y") +
+      theme_bw(base_size = 16) +
+      theme(axis.title.x = element_blank(),
+            strip.background = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            legend.title = element_blank())
+    
+    fig_irig <- ggplot(temp_irig) +
+      geom_bar(aes(x = date, 
+                   y = irrigation_mm, 
+                   fill = Summer),
+               stat = "identity",
+               position = "dodge",
+               width = 1) +
+      scale_y_continuous("Irrigation (mm)",
+                         limits = c(0, NA)) +
+      scale_x_date(date_labels = "%b %d",
+                   date_breaks = "1 month") +
+      scale_fill_canva(palette = "Warm naturals") +
+      theme_bw(base_size = 16) +
+      theme(axis.title.x = element_blank(),
+            strip.background = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            legend.title = element_blank())
+    
+    plot_grid(fig_irig, fig_WC,
+              ncol = 1,
+              align = "v",
+              rel_heights = c(1, 3))
+    
+  })
+  
+  
   output$seasonal_ts <- renderPlot({
     
     # Soil Temp
     temp_soilT <- Ts_daily %>%
       filter(Summer == input$Summer,
-             date >= input$date_range_selector[1],
-             date <= input$date_range_selector[2]) %>%
+             date >= input$date_range_selector1[1],
+             date <= input$date_range_selector1[2]) %>%
       group_by(Summer, date, Depth) %>%
       summarize(mean_Ts_mean = mean(Ts_mean, na.rm = TRUE),
                 mean_Ts_min = mean(Ts_min,  na.rm = TRUE),
@@ -151,8 +229,8 @@ server <- function(input, output) {
     
     temp_irig <- irig %>%
       filter(Summer == input$Summer,
-             date >= input$date_range_selector[1],
-             date <= input$date_range_selector[2])
+             date >= input$date_range_selector1[1],
+             date <= input$date_range_selector1[2])
 
     ratio1 <- max(temp_irig$irrigation_mm,  na.rm = TRUE) / 
       max(temp_soilT$mean_Ts_max, na.rm = TRUE)
@@ -200,8 +278,8 @@ server <- function(input, output) {
      #  Soil water content
      temp_WC <- WC_daily %>%
        filter(Summer == input$Summer,
-              date >= input$date_range_selector[1],
-              date <= input$date_range_selector[2]) %>%
+              date >= input$date_range_selector1[1],
+              date <= input$date_range_selector1[2]) %>%
        group_by(Summer, date, Depth) %>%
        summarize(mean_WC_mean = mean(WC_mean, na.rm = TRUE),
                  mean_WC_min = mean(WC_min,  na.rm = TRUE),
@@ -209,8 +287,8 @@ server <- function(input, output) {
      
      temp_irig <- irig %>%
        filter(Summer == input$Summer,
-              date >= input$date_range_selector[1],
-              date <= input$date_range_selector[2])
+              date >= input$date_range_selector1[1],
+              date <= input$date_range_selector1[2])
      
      ratio2 <- max(temp_irig$irrigation_mm,  na.rm = TRUE) / 
        max(temp_WC$mean_WC_max, na.rm = TRUE)
@@ -259,8 +337,8 @@ server <- function(input, output) {
      temp_airT <- Ta_daily %>%
        filter(Variable == "T",
               Location == "outside",
-              date >= input$date_range_selector[1],
-              date <= input$date_range_selector[2]) %>%
+              date >= input$date_range_selector1[1],
+              date <= input$date_range_selector1[2]) %>%
        group_by(date) %>%
        summarize(mean_T_mean = mean(mean, na.rm = TRUE),
                  mean_T_min = mean(min,  na.rm = TRUE),
@@ -269,8 +347,8 @@ server <- function(input, output) {
      temp_D <- Ta_daily %>%
        filter(Variable == "D",
               Location == "outside",
-              date >= input$date_range_selector[1],
-              date <= input$date_range_selector[2]) %>%
+              date >= input$date_range_selector1[1],
+              date <= input$date_range_selector1[2]) %>%
        group_by(date) %>%
        summarize(mean_D_mean = mean(mean, na.rm = TRUE),
                  mean_D_min = mean(min,  na.rm = TRUE),
@@ -434,9 +512,13 @@ server <- function(input, output) {
                                      Depth == 3 ~ "75 cm"),
              depth.label = factor(depth.label, levels = c("shallow", "25 cm", "75 cm"))) %>%
       ggplot(mapping = aes(x = WC_mean, y = WP_mean, color = as.factor(Depth))) +
-      geom_point(size = 1) +
-      geom_errorbar(aes(ymin = WP_min, ymax = WP_max), width = 0, alpha = 0.2) +
-      geom_errorbarh(aes(xmin = WC_min, xmax = WC_max), height = 0, alpha = 0.2) +
+      geom_errorbar(aes(ymin = WP_min, ymax = WP_max), 
+                    width = 0, 
+                    alpha = 0.3) +
+      geom_errorbarh(aes(xmin = WC_min, xmax = WC_max), 
+                     height = 0, 
+                     alpha = 0.3) +
+      geom_point(size = 3) +
       scale_y_continuous(expression(paste(Psi, " (MPa)"))) +
       scale_x_continuous(expression(paste(Theta, " (", m^3, " ", m^-3, ")"))) +
       facet_wrap(~depth.label,
