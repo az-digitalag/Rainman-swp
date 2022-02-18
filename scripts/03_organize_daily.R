@@ -60,7 +60,7 @@ WC <- read.csv("data/Halfhourly_VWC_SWP_Weather_112721.csv") %>%
   left_join(treats, by = c("House", "Plot"))
 
 # Read in half-hourly atmospheric variables (Ta)
-Ta <- read.csv("data/Halfhourly_VWC_Weather_030621.csv") %>%
+Ta <- read.csv("data/Halfhourly_VWC_SWP_Weather_112721.csv") %>%
   dplyr::select(TIMESTAMP, T_inside, RH_inside, T_outside, RH_outside) %>%
   mutate(TIMESTAMP = as.POSIXct(TIMESTAMP),
          date = as.Date(TIMESTAMP),
@@ -143,6 +143,8 @@ Ta_daily <- Ta %>%
                   match_fun = list(`>=`, `<=`)) %>%
   select(-st, -en) %>%
   filter(!is.na(Season))
+
+Ta_daily %>% group_by(Year) %>% summarize(n = n_distinct(Season))
 
 
 # Write out daily .Rdata files to soildata_app/ folder
