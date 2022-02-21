@@ -14,14 +14,11 @@ treats <- read.csv("data/treatments.csv") %>%
          Winter = factor(Winter, levels = c("W1", "W2", "W3")))
 
 # Label with Hydrologic year and season
-season <- data.frame(Year = c(rep(2020, 2),
+season <- data.frame(Year = c(rep(2020, 4),
                               rep(2021, 4)),
-                     Season = c(c("Premonsoon", "Growing"),
-                                rep(c("Winter", "Spring", "Premonsoon", "Growing"), 1)),
-                     st = c(c("05-01", "07-01"),
-                            rep(c("11-01", "02-01", "05-01", "07-01"), 1)),
-                     en = c(c("06-30", "10-31"),
-                            rep(c("01-31", "04-30", "06-30", "10-31"), 1))) %>%
+                     Season = c(rep(c("Winter", "Spring", "Premonsoon", "Growing"), 2)),
+                     st = c(rep(c("11-01", "02-01", "05-01", "07-01"), 2)),
+                     en = c(rep(c("01-31", "04-30", "06-30", "10-31"), 2))) %>%
   mutate(en = as.Date(paste0(Year, "-", en)),
          st = case_when(Season == "Winter" ~ as.Date(paste0(as.numeric(Year) - 1, "-", st)),
                         Season %in% c("Spring", "Premonsoon", "Growing") ~ as.Date(paste0(Year, "-", st))),
@@ -143,9 +140,6 @@ Ta_daily <- Ta %>%
                   match_fun = list(`>=`, `<=`)) %>%
   select(-st, -en) %>%
   filter(!is.na(Season))
-
-Ta_daily %>% group_by(Year) %>% summarize(n = n_distinct(Season))
-
 
 # Write out daily .Rdata files to soildata_app/ folder
 # Intended for first panel of app
