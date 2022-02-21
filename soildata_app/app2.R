@@ -61,7 +61,7 @@ ui <- navbarPage("RainManSR",
                            label = "Select treatment",
                            choices = c("Summer", "Winter")),
                # Select Year
-               selectInput(inputId = "Year",
+               selectInput(inputId = "Year1",
                            label = "Select hydrological year", 
                            choices = unique(season$Year)),
                # Select range of dates
@@ -102,7 +102,7 @@ server <- function(input, output) {
   # Render a UI for selecting date range, landing page
   output$dyn_slider <- renderUI({
     temp <- season %>%
-      filter(Year == input$Year)
+      filter(Year == input$Year1)
     sliderInput(inputId = "date_range_selector", 
                 label = "Select Date Range", 
                 min = min(temp$st),
