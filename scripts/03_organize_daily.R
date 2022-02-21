@@ -14,11 +14,15 @@ treats <- read.csv("data/treatments.csv") %>%
          Winter = factor(Winter, levels = c("W1", "W2", "W3")))
 
 # Label with Hydrologic year and season
-season <- data.frame(Year = c(rep(2020, 4),
+season <- data.frame(Year = c(2019,
+                              rep(2020, 4),
                               rep(2021, 4)),
-                     Season = c(rep(c("Winter", "Spring", "Premonsoon", "Growing"), 2)),
-                     st = c(rep(c("11-01", "02-01", "05-01", "07-01"), 2)),
-                     en = c(rep(c("01-31", "04-30", "06-30", "10-31"), 2))) %>%
+                     Season = c("Growing",
+                                rep(c("Winter", "Spring", "Premonsoon", "Growing"), 2)),
+                     st = c("07-01",
+                            rep(c("11-01", "02-01", "05-01", "07-01"), 2)),
+                     en = c("10-31",
+                            rep(c("01-31", "04-30", "06-30", "10-31"), 2))) %>%
   mutate(en = as.Date(paste0(Year, "-", en)),
          st = case_when(Season == "Winter" ~ as.Date(paste0(as.numeric(Year) - 1, "-", st)),
                         Season %in% c("Spring", "Premonsoon", "Growing") ~ as.Date(paste0(Year, "-", st))),
