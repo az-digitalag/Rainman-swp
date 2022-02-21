@@ -94,6 +94,7 @@ Ts_daily <- Ts %>%
             Plot = unique(Plot),
             Summer = unique(Summer),
             Winter = unique(Winter)) %>%
+  filter(is.finite(Ts_mean)) %>%
   mutate(plotID = paste0(House, "_", Plot)) %>%
   ungroup() %>%
   fuzzy_left_join(season, 
