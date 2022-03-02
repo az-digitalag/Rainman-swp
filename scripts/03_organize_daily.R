@@ -5,8 +5,24 @@
 library(readr)
 library(dplyr)
 library(tidyr)
+library(udunits2)
 library(plantecophys)
 library(fuzzyjoin)
+
+# Read in irrigation dates
+irig <- read_csv("data/irrigation.csv") %>%
+  tidyr::pivot_longer(-date, 
+                      names_to = "Summer", 
+                      values_to = "irrigation_mm") %>%
+  mutate(date = as.Date(date, format = "%m/%d/%Y"))
+
+# No roof prior to 5/20/2020, so need to merge with precipitation
+# Precip record only to 4/30/2020, but according to SRER records, there was May precip in 2020
+ppt <- read_csv("data/Daily_Rain_Gage.csv") %>%
+  mutate(date = as.Date(TIMESTAMP, format = "%m/%d/%Y"),
+         ppt_mm = ud.convert(`Rainfall (inch)`, "in", "mm")) %>%
+  select(date, ppt_mm) %>%
+
 
 # Read in treatments for each house/plot combination
 treats <- read.csv("data/treatments.csv") %>%
@@ -74,13 +90,6 @@ Ta <- read.csv("data/Halfhourly_VWC_SWP_Weather_112721.csv") %>%
                       names_to = c("Variable", "Location"), 
                       names_pattern = "(.*)_(.*)") %>% 
   arrange(Variable, Location, dt)
-
-# Read in irrigation dates
-irig <- read_csv("data/irrigation.csv") %>%
-  tidyr::pivot_longer(-date, 
-                      names_to = "Summer", 
-                      values_to = "irrigation_mm") %>%
-  mutate(date = as.Date(date, format = "%m/%d/%Y"))
 
 
 # Summarize half-hourly variables to daily
