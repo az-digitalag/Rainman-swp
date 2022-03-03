@@ -16,7 +16,7 @@ library(cowplot)
 load("soilTempDaily.Rdata")
 load("soilWaterContentDaily.Rdata")
 load("airTempDaily.Rdata")
-load("irrigationDaily.Rdata")
+load("comboDaily.Rdata") # combo, now includes column for precip
 load("season.Rdata")
 
 # Second tab: Compare SWC and SWP by plot
@@ -40,7 +40,7 @@ ui <- navbarPage("RainManSR",
                # Select Year
                selectInput(inputId = "Year",
                            label = "Select hydrological year", 
-                           choices = unique(season$Year)),
+                           choices = unique(season$Year)), 
                # Select Season
                uiOutput("dyn_season"),
                # Select range of dates
@@ -149,17 +149,21 @@ server <- function(input, output) {
 
   
   output$treatment_ts <- renderPlot({
-    temp_irig <- irig %>%
+    temp_irig <- combo %>%
+      # filter(date >= as.Date("2019-07-01"),
+      #        date <= as.Date("2019-10-31"))
       filter(date >= input$date_range_selector[1],
              date <= input$date_range_selector[2])
     
     temp_VWC <- WC_daily %>%
       filter(date >= input$date_range_selector[1],
              date <= input$date_range_selector[2]) %>%
+      # filter(date >= as.Date("2019-07-01"),
+      #        date <= as.Date("2019-10-31")) %>%
       tidyr::pivot_longer(cols = Summer:Winter,
                           names_to = "treatType",
                           values_to = "Treatment") %>%
-      filter(treatType == input$Treatment) %>%
+      filter(treatType == input$Treatment) %>% # input$Treatment
       group_by(Treatment, date, Depth) %>%
       summarize(mean_WC_mean = mean(WC_mean),
                 mean_WC_min = mean(WC_min),
@@ -177,7 +181,10 @@ server <- function(input, output) {
       scale_y_continuous(expression(paste(Theta[soil], "( ", m^3, " ", m^-3, ")"))) +
       scale_x_date(date_labels = "%b %d",
                    date_breaks = "1 month") +
-      scale_color_canva(palette = "Warm naturals") +
+      scale_color_manual(values = c("dodgerblue4",
+                                    "cyan2",
+                                    "gold",
+                                    "sandybrown")) +
       facet_wrap(~depth_labs,
                  ncol = 1,
                  scale = "free_y") +
@@ -195,11 +202,22 @@ server <- function(input, output) {
                stat = "identity",
                position = "dodge",
                width = 1) +
-      scale_y_continuous("Irrigation (mm)",
+      geom_bar(aes(x = date, 
+                   y = ppt_mm, 
+                   fill = "Precipitation"),
+               stat = "identity",
+               position = "dodge",
+               width = 1) +
+      scale_y_continuous("Watering (mm)",
                          limits = c(0, NA)) +
       scale_x_date(date_labels = "%b %d",
-                   date_breaks = "1 month") +
-      scale_fill_canva(palette = "Warm naturals") +
+                   date_breaks = "1 month",
+                   limits = c(min(temp_VWC$date), NA)) +
+      scale_fill_manual(values = c("gray",
+                                   "dodgerblue4",
+                                   "cyan2",
+                                   "gold",
+                                   "sandybrown")) +
       theme_bw(base_size = 16) +
       theme(axis.title.x = element_blank(),
             strip.background = element_blank(),
