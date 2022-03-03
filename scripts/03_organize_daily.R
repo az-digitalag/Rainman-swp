@@ -6,6 +6,7 @@ library(readr)
 library(dplyr)
 library(tidyr)
 library(udunits2)
+library(purrr)
 library(plantecophys)
 library(fuzzyjoin)
 
@@ -16,12 +17,28 @@ irig <- read_csv("data/irrigation.csv") %>%
                       values_to = "irrigation_mm") %>%
   mutate(date = as.Date(date, format = "%m/%d/%Y"))
 
+
+
 # No roof prior to 5/20/2020, so need to merge with precipitation
 # Precip record only to 4/30/2020, but according to SRER records, there was May precip in 2020
-ppt <- read_csv("data/Daily_Rain_Gage.csv") %>%
+ppt <- read_csv("data/Daily_Raingage_02262022.csv") %>%
   mutate(date = as.Date(TIMESTAMP, format = "%m/%d/%Y"),
          ppt_mm = ud.convert(`Rainfall (inch)`, "in", "mm")) %>%
   select(date, ppt_mm) %>%
+  filter(date <= as.Date("2020-05-20"), 
+         ppt_mm != 0)
+
+add_trt <- function(trt, df) {
+  df$Summer <- trt
+  df
+}
+ppt_trt <- map_dfr(c("S1", "S2", "S3", "S4"),
+                    add_trt,
+                    df = ppt) %>%
+  arrange(date)
+
+combo <- full_join(irig, ppt_trt) %>%
+  arrange(date, Summer)
 
 
 # Read in treatments for each house/plot combination
@@ -161,6 +178,7 @@ save(Ts_daily, file = "soildata_app/soilTempDaily.Rdata")
 save(WC_daily, file = "soildata_app/soilWaterContentDaily.Rdata")
 save(Ta_daily, file = "soildata_app/airTempDaily.Rdata")
 save(irig, file = "soildata_app/irrigationDaily.Rdata")
+save(combo, file = "soildata_app/comboDaily.Rdata")
 save(season, file = "soildata_app/season.Rdata")
 
 
