@@ -22,7 +22,10 @@ load("season.Rdata")
 # Second tab: Compare SWC and SWP by plot
 load("soilWPWCDaily.Rdata")
 
-# Define UI for application with two tabs
+# initialize global variable to record clicked rows
+selected_points <- WPWC_daily[0,]
+
+# Define UI for application with three tabs
 ui <- navbarPage("RainManSR",
   tabPanel("Daily time series",
            titlePanel("Explore by treatment and season"),
@@ -44,7 +47,7 @@ ui <- navbarPage("RainManSR",
                # Select Season
                uiOutput("dyn_season"),
                # Select range of dates
-               uiOutput("dyn_slider1")
+               uiOutput("dyn_slider")
              ),
              # Show a size plot for selected species
              mainPanel(
@@ -65,7 +68,7 @@ ui <- navbarPage("RainManSR",
                            label = "Select hydrological year", 
                            choices = unique(season$Year)),
                # Select range of dates
-               uiOutput("dyn_slider")
+               uiOutput("dyn_slider1")
              ),
              # Show a size plot for selected species
              mainPanel(
@@ -90,7 +93,7 @@ ui <- navbarPage("RainManSR",
              
              # Show a size plot for selected species
              mainPanel(
-               h5('Click on point to obtain date'),
+               h5('Click on point to obtain values. '),
                fluidRow(plotOutput("WPWC_scatter", 
                                    width = "100%", 
                                    height = "300px",
@@ -101,20 +104,8 @@ ui <- navbarPage("RainManSR",
            ))
 )
 
-# Create timeseries plot for swc and swp on same panel
+
 server <- function(input, output) {
-  
-  # Render a UI for selecting date range, landing page
-  output$dyn_slider <- renderUI({
-    temp <- season %>%
-      filter(Year == input$Year1)
-    sliderInput(inputId = "date_range_selector", 
-                label = "Select Date Range", 
-                min = min(temp$st),
-                max = max(temp$en),
-                value = c(min(temp$st),
-                          max(temp$en)))
-  })
   
   # Render a UI for selecting Season
   output$dyn_season <- renderUI({
@@ -127,12 +118,12 @@ server <- function(input, output) {
                 choices = temp)
   })
   
-  # Render a UI for selecting date range, tab 1
-  output$dyn_slider1 <- renderUI({
+  # Render a UI for selecting date range, landing page
+  output$dyn_slider <- renderUI({
     temp <- season %>%
       filter(Year == input$Year,
              Season == input$Season)
-    sliderInput(inputId = "date_range_selector1", 
+    sliderInput(inputId = "date_range_selector", 
                 label = "Select Date Range", 
                 min = temp$st,
                 max = temp$en,
@@ -140,7 +131,21 @@ server <- function(input, output) {
                           temp$en))
   })
   
-  # Render a UI for selecting date range tab 2
+
+  # Render a UI for selecting date range, tab2
+  output$dyn_slider1 <- renderUI({
+    temp <- season %>%
+      filter(Year == input$Year1)
+    sliderInput(inputId = "date_range_selector1", 
+                label = "Select Date Range", 
+                min = min(temp$st),
+                max = max(temp$en),
+                value = c(min(temp$st),
+                          max(temp$en)))
+  })
+
+  
+  # Render a UI for selecting date range tab 3
   output$dyn_slider2 <- renderUI({
     temp <- season %>%
       filter(Year == input$Year2)
@@ -160,8 +165,8 @@ server <- function(input, output) {
       filter(Summer == input$Summer, # input$Summer
              # date >= as.Date("2020-06-01"),
              # date <= as.Date("2020-09-30")) %>%
-             date >= input$date_range_selector1[1],
-             date <= input$date_range_selector1[2]) %>%
+             date >= input$date_range_selector[1],
+             date <= input$date_range_selector[2]) %>%
       group_by(Summer, date, Depth) %>%
       summarize(mean_Ts_mean = mean(Ts_mean, na.rm = TRUE),
                 mean_Ts_min = mean(Ts_min,  na.rm = TRUE),
@@ -171,8 +176,8 @@ server <- function(input, output) {
       filter(Summer == input$Summer, # input$Summer
              # date >= as.Date("2020-07-01"),
              # date <= as.Date("2020-09-30")) %>%
-             date >= input$date_range_selector1[1],
-             date <= input$date_range_selector1[2]) %>%
+             date >= input$date_range_selector[1],
+             date <= input$date_range_selector[2]) %>%
       mutate(ppt_mm = ifelse(is.na(ppt_mm), 0, ppt_mm),
              irrigation_mm = ifelse(is.na(irrigation_mm), 0, irrigation_mm))
     
@@ -239,8 +244,8 @@ server <- function(input, output) {
     #  Soil water content
     temp_WC <- WC_daily %>%
       filter(Summer == input$Summer,
-             date >= input$date_range_selector1[1],
-             date <= input$date_range_selector1[2]) %>%
+             date >= input$date_range_selector[1],
+             date <= input$date_range_selector[2]) %>%
       group_by(Summer, date, Depth) %>%
       summarize(mean_WC_mean = mean(WC_mean, na.rm = TRUE),
                 mean_WC_min = mean(WC_min,  na.rm = TRUE),
@@ -304,8 +309,8 @@ server <- function(input, output) {
     temp_airT <- Ta_daily %>%
       filter(Variable == "T",
              Location == "outside",
-             date >= input$date_range_selector1[1],
-             date <= input$date_range_selector1[2]) %>%
+             date >= input$date_range_selector[1],
+             date <= input$date_range_selector[2]) %>%
       group_by(date) %>%
       summarize(mean_T_mean = mean(mean, na.rm = TRUE),
                 mean_T_min = mean(min,  na.rm = TRUE),
@@ -314,8 +319,8 @@ server <- function(input, output) {
     temp_D <- Ta_daily %>%
       filter(Variable == "D",
              Location == "outside",
-             date >= input$date_range_selector1[1],
-             date <= input$date_range_selector1[2]) %>%
+             date >= input$date_range_selector[1],
+             date <= input$date_range_selector[2]) %>%
       group_by(date) %>%
       summarize(mean_D_mean = mean(mean, na.rm = TRUE),
                 mean_D_min = mean(min,  na.rm = TRUE),
@@ -386,12 +391,12 @@ server <- function(input, output) {
     temp_irig <- combo %>%
       # filter(date >= as.Date("2019-07-01"),
       #        date <= as.Date("2019-10-31"))
-      filter(date >= input$date_range_selector[1],
-             date <= input$date_range_selector[2])
+      filter(date >= input$date_range_selector1[1],
+             date <= input$date_range_selector1[2])
     
     temp_VWC <- WC_daily %>%
-      filter(date >= input$date_range_selector[1],
-             date <= input$date_range_selector[2]) %>%
+      filter(date >= input$date_range_selector1[1],
+             date <= input$date_range_selector1[2]) %>%
       # filter(date >= as.Date("2019-07-01"),
       #        date <= as.Date("2019-10-31")) %>%
       tidyr::pivot_longer(cols = Summer:Winter,
@@ -466,7 +471,21 @@ server <- function(input, output) {
     
   })
   
+  # Select clicked points 1 at a time
+  observe({
+
+    selected_points <<- rbind(selected_points,
+                              nearPoints(WPWC_daily, input$plot_click,
+                                         threshold = 5, maxpoints = 1, addDist = TRUE))
+
+    selected_points <<- tail(selected_points, 1)
+    dim(selected_points)
+
+  })
+  
   output$WPWC_ts <- renderPlot({
+    input$plot_click
+    
     temp_WPWC <- WPWC_daily %>%
       filter(Summer == input$Summer2,
              date >= input$date_range_selector2[1],
@@ -524,6 +543,10 @@ server <- function(input, output) {
                      y = WP_mean, 
                      color = Depth),
                  size = 3) +
+      geom_point(data = selected_points, 
+                 aes(x = date,
+                     y = WP_mean),
+                 color = "black", size = 4)+
       scale_y_continuous(expression(paste(Psi[soil], " (MPa)")),
                          limits = c(NA, 0),
                          sec.axis = sec_axis(~./ratio1,
@@ -565,6 +588,10 @@ server <- function(input, output) {
                      y = WC_mean, 
                      color = Depth),
                  size = 3) +
+      geom_point(data = selected_points, 
+                 aes(x = date,
+                     y = WC_mean),
+                 color = "black", size = 4)+
       scale_y_continuous(expression(paste(Theta[soil], "( ", m^3, " ", m^-3, ")")),
                          limits = c(0, NA),
                          sec.axis = sec_axis(~./ratio2,
