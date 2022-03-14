@@ -51,7 +51,10 @@ ui <- navbarPage("RainManSR",
              ),
              # Show a size plot for selected species
              mainPanel(
-               fluidRow(plotOutput("seasonal_ts", width = "100%", height = "800px"))
+               h4("Mean over plots by treatment"),
+               fluidRow(plotOutput("seasonal_ts", width = "100%", height = "800px")),
+               h5("For top two panels, error bars represent the range from the mean minimum to the mean maximum across plots of the same treatment. "),
+               h5("For the bottom panel, error bars represent the daily range in varaiables. ")
              )
            )),
   tabPanel("Compare treatments",
@@ -170,7 +173,17 @@ server <- function(input, output) {
       group_by(Summer, date, Depth) %>%
       summarize(mean_Ts_mean = mean(Ts_mean, na.rm = TRUE),
                 mean_Ts_min = mean(Ts_min,  na.rm = TRUE),
-                mean_Ts_max = mean(Ts_max,  na.rm = TRUE))
+                mean_Ts_max = mean(Ts_max,  na.rm = TRUE),
+                n = n())
+    
+    # For labeling depths with sample size
+    temp_soilT_n <- temp_soilT %>%
+      group_by(Depth) %>%
+      summarize(n_plots = max(n)) %>%
+      mutate(depth_char = case_when(Depth == 1 ~ "0-12 cm",
+                               Depth == 2 ~ "25 cm",
+                               Depth == 3 ~ "75 cm"),
+             depth_label = paste0(depth_char, " (n = ", n_plots, ")"))
     
     temp_irig <- combo %>%
       filter(Summer == input$Summer, # input$Summer
@@ -231,7 +244,7 @@ server <- function(input, output) {
                    date_breaks = "1 week") +
       theme_bw(base_size = 16) +
       scale_fill_manual(values = c("lightblue", "gray")[1:color_ind]) +
-      scale_color_manual(labels = c("0-12 cm", "25 cm", "75 cm")[unique(temp_soilT$Depth)], 
+      scale_color_manual(labels = temp_soilT_n$depth_label[unique(temp_soilT$Depth)], 
                          values = c("#8C510A", "#BF812D", "#DFC27D")[unique(temp_soilT$Depth)]) +
       theme(axis.title.x = element_blank(),
             strip.background = element_blank(),
@@ -243,13 +256,25 @@ server <- function(input, output) {
     
     #  Soil water content
     temp_WC <- WC_daily %>%
-      filter(Summer == input$Summer,
+      filter(Summer == input$Summer, # input$Summer
+             # date >= as.Date("2020-07-01"),
+             # date <= as.Date("2020-09-30")) %>%
              date >= input$date_range_selector[1],
              date <= input$date_range_selector[2]) %>%
       group_by(Summer, date, Depth) %>%
       summarize(mean_WC_mean = mean(WC_mean, na.rm = TRUE),
                 mean_WC_min = mean(WC_min,  na.rm = TRUE),
-                mean_WC_max = mean(WC_max,  na.rm = TRUE))
+                mean_WC_max = mean(WC_max,  na.rm = TRUE), 
+                n = n())
+    
+    # For labeling depths with sample size
+    temp_WC_n <- temp_WC %>%
+      group_by(Depth) %>%
+      summarize(n_plots = max(n)) %>%
+      mutate(depth_char = case_when(Depth == 1 ~ "0-12 cm",
+                                    Depth == 2 ~ "25 cm",
+                                    Depth == 3 ~ "75 cm"),
+             depth_label = paste0(depth_char, " (n = ", n_plots, ")"))
     
     ratio2 <- if(nrow(temp_irig) == 0) { 
       1 } else {max(max(temp_irig$irrigation_mm,  na.rm = TRUE), 
@@ -295,7 +320,7 @@ server <- function(input, output) {
                    date_breaks = "1 week") + 
       theme_bw(base_size = 16) +
       scale_fill_manual(values = c("lightblue", "gray")[1:color_ind]) +
-      scale_color_manual(labels = c("0-12 cm", "25 cm", "75 cm")[unique(temp_WC$Depth)], 
+      scale_color_manual(labels = temp_WC_n$depth_label[unique(temp_WC$Depth)], 
                          values = c("#52958b", "#494e6b", "#b9c4c9")[unique(temp_WC$Depth)]) +
       theme(axis.title.x = element_blank(),
             strip.background = element_blank(),
@@ -389,16 +414,16 @@ server <- function(input, output) {
   # Function for comparing all treatments by year
   output$treatment_ts <- renderPlot({
     temp_irig <- combo %>%
-      # filter(date >= as.Date("2019-07-01"),
-      #        date <= as.Date("2019-10-31"))
+      # filter(date >= as.Date("2020-07-01"),
+      #        date <= as.Date("2020-10-31"))
       filter(date >= input$date_range_selector1[1],
              date <= input$date_range_selector1[2])
     
     temp_VWC <- WC_daily %>%
       filter(date >= input$date_range_selector1[1],
              date <= input$date_range_selector1[2]) %>%
-      # filter(date >= as.Date("2019-07-01"),
-      #        date <= as.Date("2019-10-31")) %>%
+      # filter(date >= as.Date("2020-07-01"),
+      #        date <= as.Date("2020-10-31")) %>%
       tidyr::pivot_longer(cols = Summer:Winter,
                           names_to = "treatType",
                           values_to = "Treatment") %>%
@@ -406,34 +431,19 @@ server <- function(input, output) {
       group_by(Treatment, date, Depth) %>%
       summarize(mean_WC_mean = mean(WC_mean),
                 mean_WC_min = mean(WC_min),
-                mean_WC_max = mean(WC_max)) %>%
+                mean_WC_max = mean(WC_max), 
+                n = n()) %>%
       mutate(depth_labs = case_when(Depth == 1 ~ "0-12 cm",
                                     Depth == 2 ~ "25 cm",
                                     Depth == 3 ~ "75 cm"))
     
-    fig_WC <- ggplot(temp_VWC, aes(x = date, y = mean_WC_mean, color = Treatment)) + #
-      geom_errorbar(aes(ymin = mean_WC_min,
-                        ymax = mean_WC_max),
-                    width = 0, 
-                    alpha = 0.3) +
-      geom_point(size = 3) +
-      scale_y_continuous(expression(paste(Theta[soil], "( ", m^3, " ", m^-3, ")"))) +
-      scale_x_date(date_labels = "%b %d",
-                   date_breaks = "1 month") +
-      scale_color_manual(values = c("dodgerblue4",
-                                    "cyan2",
-                                    "gold",
-                                    "sandybrown")) +
-      facet_wrap(~depth_labs,
-                 ncol = 1,
-                 scale = "free_y") +
-      theme_bw(base_size = 16) +
-      theme(axis.title.x = element_blank(),
-            strip.background = element_blank(),
-            panel.grid.major = element_blank(),
-            panel.grid.minor = element_blank(),
-            legend.title = element_blank())
+    # Add sample sizes
+    temp_VWC_n <- temp_VWC %>%
+      group_by(Treatment, depth_labs) %>%
+      summarize(n_plots = max(n)) %>%
+      mutate(depth_label = paste0(Treatment, " (n = ", n_plots, ")"))
     
+    # Irrigation amounts comparison
     fig_irig <- ggplot(temp_irig) +
       geom_bar(aes(x = date, 
                    y = irrigation_mm, 
@@ -464,10 +474,96 @@ server <- function(input, output) {
             panel.grid.minor = element_blank(),
             legend.title = element_blank())
     
-    plot_grid(fig_irig, fig_WC,
+    # Mean treatment differences in WC, plot separately by depth
+    n_1 <- temp_VWC_n %>%
+      filter(depth_labs == "0-12 cm")
+    fig_WC_1 <- temp_VWC %>%
+      filter(Depth == 1) %>%
+      ggplot(aes(x = date, y = mean_WC_mean, color = Treatment)) + #
+      geom_errorbar(aes(ymin = mean_WC_min,
+                        ymax = mean_WC_max),
+                    width = 0, 
+                    alpha = 0.3) +
+      geom_point(size = 3) +
+      # scale_y_continuous(expression(paste(Theta[soil], "( ", m^3, " ", m^-3, ")"))) +
+      scale_x_date(date_labels = "%b %d",
+                   date_breaks = "1 month") +
+      scale_color_manual(labels = n_1$depth_label,
+                         values = c("dodgerblue4",
+                                    "cyan2",
+                                    "gold",
+                                    "sandybrown")) +
+      theme_bw(base_size = 16) +
+      theme(axis.title.x = element_blank(),
+            strip.background = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            legend.title = element_blank(),
+            axis.title.y = element_blank())
+    
+    n_2 <- temp_VWC_n %>%
+      filter(depth_labs == "25 cm")
+    fig_WC_2 <- temp_VWC %>%
+      filter(Depth == 2) %>%
+      ggplot(aes(x = date, y = mean_WC_mean, color = Treatment)) + #
+      geom_errorbar(aes(ymin = mean_WC_min,
+                        ymax = mean_WC_max),
+                    width = 0, 
+                    alpha = 0.3) +
+      geom_point(size = 3) +
+      scale_y_continuous(expression(paste(Theta[soil], "( ", m^3, " ", m^-3, ")"))) +
+      scale_x_date(date_labels = "%b %d",
+                   date_breaks = "1 month") +
+      scale_color_manual(labels = n_2$depth_label,
+                         values = c("dodgerblue4",
+                                    "cyan2",
+                                    # "gold",
+                                    "sandybrown")) +
+      theme_bw(base_size = 16) +
+      theme(axis.title.x = element_blank(),
+            strip.background = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            legend.title = element_blank())
+    
+    n_3 <- temp_VWC_n %>%
+      filter(depth_labs == "75 cm")
+    fig_WC_3 <- temp_VWC %>%
+      filter(Depth == 3) %>%
+      ggplot(aes(x = date, y = mean_WC_mean, color = Treatment)) + #
+      geom_errorbar(aes(ymin = mean_WC_min,
+                        ymax = mean_WC_max),
+                    width = 0, 
+                    alpha = 0.3) +
+      geom_point(size = 3) +
+      # scale_y_continuous(expression(paste(Theta[soil], "( ", m^3, " ", m^-3, ")"))) +
+      scale_x_date(date_labels = "%b %d",
+                   date_breaks = "1 month") +
+      scale_color_manual(labels = n_3$depth_label,
+                         values = c("dodgerblue4",
+                                    "cyan2",
+                                    # "gold",
+                                    "sandybrown")) +
+      theme_bw(base_size = 16) +
+      theme(axis.title.x = element_blank(),
+            strip.background = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            legend.title = element_blank(),
+            axis.title.y = element_blank())
+    
+    plot_grid(fig_irig, 
+              fig_WC_1,
+              fig_WC_2,
+              fig_WC_3,
+              labels = c("", "0-12 cm", "25 cm", "75 cm"),
+              label_size = 16,
+              label_x = 0.05,
+              label_y = 1,
+              hjust = 0, 
+              vjust = 0,
               ncol = 1,
-              align = "v",
-              rel_heights = c(1, 3))
+              align = "v")
     
   })
   
