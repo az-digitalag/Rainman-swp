@@ -22,3 +22,6 @@ models/v1/rsconnect/
 
 # Documents folder
 docs/
+
+# Plots (for now)
+plots/
