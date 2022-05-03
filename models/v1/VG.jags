@@ -1,0 +1,34 @@
+model{
+  for(i in 1:Nobs){ # Number of observations
+    # Likelihood of VWC (volumetric water content, proportion)
+    theta[i] ~ dnorm(mu[i],tau)
+    # Replicated data
+    theta.rep[i]~ dnorm(mu[i],tau)
+    
+    # theta.s is saturated VWC
+    # theta.r is residual VWC from oven dried sample
+    # h.cm is water potential in cm
+    # Parameters are alpha.cm (inverse of air-entry value, cm ^-1)
+    # n (empirical shape parameter, unitless)
+    mu[i] <- theta.r[trt[i]] + ((theta.s - theta.r[trt[i]])/
+                            pow(1 + (pow(alpha.cm[trt[i]]*h.cm[i], n[trt[i]])),(1-(1/n[trt[i]]))))
+
+  }
+  
+  # Priors for VG parameters
+  for(j in 1:Ntrt){ # Number of treatments
+    # Very diffuse prior
+    alpha.cm[j] ~ dunif(0, 50)
+    
+    # Prior that is less diffuse based on other data
+    n[j] ~ dunif(0.5, 3)
+    
+    # Very constrained prior based on data
+    theta.r[j] ~ dunif(0.01, 0.05)
+    
+  }
+
+  # Priors for precision
+  tau <- pow(sig,-2)
+  sig ~ dunif(0,10)
+}
