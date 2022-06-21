@@ -6,6 +6,7 @@ scripts/*.html
 data/
 *.csv
 *.Rdata
+!source/lookup.Rdata
 
 # plots
 *.jpg
