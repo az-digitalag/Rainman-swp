@@ -140,7 +140,7 @@ lookup <- out_df %>%
                                n >= 1000 ~ -1 * S4_MPa_75))
 
 # Save
-save(lookup, file = "models/v2/source/lookup.Rdata")
+save(lookup, file = "source/lookup.Rdata")
 
   
 # Load original input data
@@ -154,10 +154,8 @@ foo <- head(dat$WC_mean, 1)
 lookup$SWP_MPa_25[which.min(abs(lookup$SWC - foo))]
 
 
-
-
 get_SWP_MPa <- function(SWC, param = "site", stat = "median") {
-  if(min(SWC) < 0.0439 | max(SWC) >= 0.44){ 
+  if(min(SWC) < 0.0439 | max(SWC) >= 0.44){ # based on n > = 1000
     print("SWC out of range")
   } 
   
