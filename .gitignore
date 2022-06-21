@@ -19,6 +19,7 @@ data/
 scripts/01_exporation_daily_files/
 soildata_app/rsconnect/
 models/v1/rsconnect/
+models/v2/rsconnect/
 
 # Documents folder
 docs/
