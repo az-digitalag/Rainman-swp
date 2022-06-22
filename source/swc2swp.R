@@ -10,11 +10,16 @@
 # Used criteria of at least 1000 predictions at that SWC value
 
 # Load lookup table
-load("models/v2/source/lookup.Rdata")
+if(file.exists("source/lookup.Rdata")) {
+  load("source/lookup.Rdata")
+} else {
+  load("../../source/lookup.Rdata")
+}
+
 
 swc2swp <- function(SWC, param = "site", stat = "median") {
   if(min(SWC) < 0.0439 | max(SWC) >= 0.44){ # based on n > = 1000
-    print("SWC out of range")
+    warning("SWC out of range")
   } 
   
   if(param == "site") {
