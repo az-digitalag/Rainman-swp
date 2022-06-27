@@ -7,7 +7,7 @@ This repository hosts time-series of soil data (VWC and water potential) provide
 
 (3) [model](https://viz.datascience.arizona.edu/VG_curves/) the VWC-SWP relationship and derive Van Genuchten parameters 
 
-(4) create a function with a look up table to convert in VWC into SWP for RainMan soils
+(4) create a [function with a look up table](https://github.com/cct-datascience/Rainman-swp/tree/main/source) to convert in VWC into SWP for RainMan soils
 
 ## Data description
 There are about 50 VWC sensors and 6 SWP sensors installed. The 6 SWP sensors are matched with 6 SWC sensors in 2 plots and at 3 depths in profile, for the S1 and S4 treatments. Soil temperature is also provided for screening, correcting, or interpreting diurnal or temperature induced oscillations, which mostly occur in the SWP data at dry values.
