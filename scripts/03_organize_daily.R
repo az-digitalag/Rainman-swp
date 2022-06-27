@@ -177,7 +177,6 @@ Ta_daily <- Ta %>%
 save(Ts_daily, file = "soildata_app/soilTempDaily.Rdata")
 save(WC_daily, file = "soildata_app/soilWaterContentDaily.Rdata")
 save(Ta_daily, file = "soildata_app/airTempDaily.Rdata")
-save(irig, file = "soildata_app/irrigationDaily.Rdata")
 save(combo, file = "soildata_app/comboDaily.Rdata")
 save(season, file = "soildata_app/season.Rdata")
 
