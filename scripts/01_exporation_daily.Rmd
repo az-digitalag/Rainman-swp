@@ -33,7 +33,7 @@ Soil temperature and soil water data are recorded as half-hourly time series in 
 Air temperature below -6 or so is not reasonable, so filter out T values < -10. 
 
 ```{r}
-Ts <- read.csv("../data/Halfhourly_TS_0113.csv") %>%
+Ts <- read.csv("../data/Halfhourly_TS_011321.csv") %>%
   dplyr::select(-X) %>%
   mutate(TIMESTAMP = as.POSIXct(TIMESTAMP),
          date = as.Date(TIMESTAMP)) %>%
