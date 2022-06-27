@@ -7,6 +7,7 @@ scripts/*.html
 !source/lookup.Rdata
 !models/v1/out.Rdata
 !models/v2/out.Rdata
+!soildata_app/*.Rdata
 
 
 # R project files
