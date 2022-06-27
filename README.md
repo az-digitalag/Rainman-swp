@@ -58,7 +58,7 @@ Key dates include:
   - `04_explores_pulses.R` explores criteria for selecting VWC and SWP data for the Van Genuchten curves
   - `05_select_data.R` selects data and saves to `models/v1/` and `models/v2/`
   
-- `soildata_app/`
+- `soildata_app/` contains the code for the [Shiny app](https://viz.datascience.arizona.edu/rainman-soildata/), documented [here](https://github.com/cct-datascience/Rainman-swp/tree/main/soildata_app#interactive-exploration-of-rainman-soil-data)
   - `app2.R` that creates an interactive visualization with 3 tabs
   - The following .Rdata files were created in `scripts/03_organize.daily.Rmd`
     - `soilTempDaily.Rdata` daily soil temperature by plot and depth
