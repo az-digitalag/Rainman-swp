@@ -7,6 +7,8 @@ data/
 *.csv
 *.Rdata
 !source/lookup.Rdata
+!models/v1/out.Rdata
+!models/v2/out.Rdata
 
 # plots
 *.jpg
