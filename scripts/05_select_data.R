@@ -157,6 +157,7 @@ out <- rbind(S4_shallow_growing[cnames],
              mid_20_spring[cnames])
 
 save(out, file = "models/v1/out.Rdata")
+save(out, file = "models/v2/out.Rdata")
 
 # Plot in comparison to Fig. 3.4A from PNNL document
 out <- out %>%
