@@ -1,20 +1,28 @@
-# Soil water potential at RainManSR
-This repository hosts time-series of soil data (VWC and water potential) provided by Joel Biederman and Fangyue Zhang and code to (1) explore the data, (2) interactively visualize the data in a Shiny app, and (3) model the VWC-SWP relationship and derive Van Genuchten parameters. 
+# Leveraging <i>in situ</i> sensors for soil water release curves
+This repository hosts time-series of soil data (VWC and water potential) provided by Joel Biederman and Fangyue Zhang to address how to derive soil moisture release curves from paired <i>in situ</i> sensors of volumetric water content (VWC) and soil water potential (SWP). The [incubator proposal](https://docs.google.com/document/d/1IWLPrM-9FJBcEZBZ_9FvtPL6JcJhNUR6HLwgwzTGFv4/edit) describes the initial scope of work, which expanded to include the following:
+
+(1) explore whether daily or half-hourly data was more suitable for moisture release curves
+
+(2) interactively visualize the data in a [Shiny app](https://viz.datascience.arizona.edu/rainman-soildata/)
+
+(3) [model](https://viz.datascience.arizona.edu/VG_curves/) the VWC-SWP relationship and derive Van Genuchten parameters 
+
+(4) create a function with a look up table to convert in VWC into SWP for RainMan soils
 
 ## Data description
-There are about 50 VWC sensors and 6 SWP sensors installed. The 6 SWP sensors are matched with 6 SWC sensors in 2 plots and at 3 depths in profile, for the S1 and S4 treatments. Tsoil is also provided for screening, correcting, or interpreting diurnal or temperature induced oscillations, which mostly occur in the SWP data at dry values.
+There are about 50 VWC sensors and 6 SWP sensors installed. The 6 SWP sensors are matched with 6 SWC sensors in 2 plots and at 3 depths in profile, for the S1 and S4 treatments. Soil temperature is also provided for screening, correcting, or interpreting diurnal or temperature induced oscillations, which mostly occur in the SWP data at dry values.
 
 Key dates include:
 - April/May 2019, plot construction and installation of most VWC sensors
 - August 2019, SWP sensors installed
 - 10/1/2019, start of data provided
 - 10/31/2019, large irrigation applied to prep for transplant
-- 11/1/2019, 30 Digitaria californica (Arizona cottontop) transplanted to plot. Plots then receive natural rainfall + irrigation every 1-2 weeks
+- 11/1/2019, 30 <i>Digitaria californica</i> (Arizona cottontop) transplanted to plot. Plots then receive natural rainfall + irrigation every 1-2 weeks
 - May 2020, irrigation ceased and roofs installed
 - 7/13/2020, irrigation treatments (temporal repackaging of summer precipitation, S1-S4) applied. Each house contains 3 replicates of each of 4 summer treatments (12 plots per house, 5 houses)
 - 10/1/2020, separate winter rainfall treatments ended and all plots have received equal winter treatments, applied every 2 weeks
 
-## File structure
+## Repository description
 
 - `data/` contains csv files provided by Fangyue
   - `Daily_Rain_Gage.csv` and `Daily_Raingage_02262022.csv` contain daily total precip from an on-site gauge
@@ -25,13 +33,13 @@ Key dates include:
   
 - `models/` are the non-linear Bayesian models to fit data to Van Genuchten function
   - `v1/` contains the non-hierarhical model, scripts, and report
-    - `out.Rdata` input data created from `scripts/05_select_data.R`
+    - `out.Rdata` daily data created from `scripts/05_select_data.R`
     - `01_run_model.R` runs model
     - `02_plot_output.R` plots output
     - `VG.jags` JAGS model, separate parameters for S1 and S4
     - `model_report.Rmd` reports model description and output
   - `v2/` contains the hierarchical model, scripts, and report
-    - `out.Rdata` input data created from `scripts/05_select_data.R`
+    - `out.Rdata` daily data created from `scripts/05_select_data.R`
     - `01_run_model.R` runs model
     - `02_plot_output.R` plots output
     - `03_create_table.R` creates lookup table with posterior parameters
@@ -51,6 +59,14 @@ Key dates include:
   - `05_select_data.R` selects data and saves to `models/v1/` and `models/v2/`
   
 - `soildata_app/`
+  - `app2.R` that creates an interactive visualization with 3 tabs
+  - The following .Rdata files were created in `scripts/03_organize.daily.Rmd`
+    - `soilTempDaily.Rdata` daily soil temperature by plot and depth
+    - `soilWaterContentDaily.Rdata` daily VWC by plot and depth
+    - `airTempDaily.Rdata` daily air temperature, RH, and VPD both inside and outside the shelters
+    - `comboDaily.Rdata` appreciation and/or irrigation (mm) in each treatment
+    - `season.Rdata` start and end dates of each water year season
+    - `soilWPWCDaily.Rdata` matched VWC and SWP data for the S1 and S4 plot in House 3
 
 - `source/` contains custom R functions
   - `lookup.Rdata` contains the output of `models/v2/03_create_table.R` as a lookup table for converting VWC to SWP 
