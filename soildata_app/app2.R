@@ -19,7 +19,7 @@ load("airTempDaily.Rdata")
 load("comboDaily.Rdata") # combo, now includes column for precip
 load("season.Rdata")
 
-# Second tab: Compare SWC and SWP by plot
+# Third tab: Compare SWP and VWC by plot and depth
 load("soilWPWCDaily.Rdata")
 
 # initialize global variable to record clicked rows
@@ -58,7 +58,7 @@ ui <- navbarPage("RainManSR",
              )
            )),
   tabPanel("Compare treatments",
-           titlePanel("SWC by treatment type and year"),
+           titlePanel("VWC by treatment type and year"),
            # Sidebar with drop down input for treatments, times, and date ranges
            sidebarLayout(
              sidebarPanel(
@@ -78,7 +78,7 @@ ui <- navbarPage("RainManSR",
                fluidRow(plotOutput("treatment_ts", width = "100%", height = "800px"))
              )
            )),
-  tabPanel("Compare SWP and SWC",
+  tabPanel("Compare SWP and VWC",
            titlePanel("Relationships by treatment and year"),
            sidebarLayout(
              sidebarPanel(
