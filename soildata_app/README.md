@@ -24,6 +24,6 @@ Here, either Summer or Winter treatments can be selected and compared, although 
 
 ## Compare SWP and VWC
 
-For the third tab, the 'Select Date Range' UI was dynamic depending on the selected water year. Here, only the paired SWP and VWC data from two plots in House 3 were utilized, representing an S1 and and S4 treatment. The first panel is a bivariate plot of SWP and VWC for the selected treatment and time range, but across all three depths. A dynamic tooltip was created to identify outliers in the SWP-VWC relationship. The bottom two panels show SWP and VWC as time series, with watering as the second axis, which can show hysteresis between the two sensor types. 
+For the third tab, the 'Select Date Range' UI was dynamic depending on the selected water year. Here, only the paired SWP and VWC data from two plots in House 3 were utilized, representing an S1 and and S4 treatment. The first panel is a bivariate plot of SWP and VWC for the selected treatment and time range for all three depths. A dynamic tooltip was created to identify outliers in the SWP-VWC relationship. The bottom two panels show SWP and VWC as time series, with watering as the second axis, which can show hysteresis between the two sensor types. 
 
 Since there are only two plots instrumented with both types of sensors, future winter treatments should not affect the utility of this tool, which was primarily used to identify regions of congruence between SWP and VWC as input periods for the Van Genuchten model. 
