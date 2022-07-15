@@ -75,7 +75,7 @@ WC <- WC %>%
 For plotting purposes, we also note when irrigation occurred. H3P4 received the S1 treatment, and H3P7 received the S4 treatment. 
 ```{r}
 irig <- readr::read_csv("../data/irrigation.csv") %>%
-  mutate(dt = as.POSIXct(paste0(date, " 12:00:00"), tz = "America/Phoenix")) %>%
+  mutate(dt = lubridate::mdy_h(paste0(date, " 12"), tz = "America/Phoenix")) %>%
   rename(Plot_4 = S1, Plot_7 = S4) %>%
   tidyr::pivot_longer(!c(dt, date), 
                       names_to = "Plot", 
