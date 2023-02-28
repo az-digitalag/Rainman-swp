@@ -37,9 +37,9 @@ ui <- navbarPage("RainManSR",
                            label = "Select summer treatment",
                            choices = levels(Ts_daily$Summer)),
                # # Select Winter treatment
-               # selectInput(inputId = "Winter",
-               #             label = "Select winter treatment",
-               #             choices = unique(Ts_daily$Winter)),
+               selectInput(inputId = "Winter",
+                            label = "Select winter treatment",
+                            choices = unique(Ts_daily$Winter)),
                # Select Year
                selectInput(inputId = "Year",
                            label = "Select hydrological year", 
@@ -166,11 +166,12 @@ server <- function(input, output) {
     # Soil Temp
     temp_soilT <- Ts_daily %>%
       filter(Summer == input$Summer, # input$Summer
+             Winter == input$Winter,
              # date >= as.Date("2020-06-01"),
              # date <= as.Date("2020-09-30")) %>%
              date >= input$date_range_selector[1],
              date <= input$date_range_selector[2]) %>%
-      group_by(Summer, date, Depth) %>%
+      group_by(Summer, Winter, date, Depth) %>%
       summarize(mean_Ts_mean = mean(Ts_mean, na.rm = TRUE),
                 mean_Ts_min = mean(Ts_min,  na.rm = TRUE),
                 mean_Ts_max = mean(Ts_max,  na.rm = TRUE),
@@ -257,11 +258,12 @@ server <- function(input, output) {
     #  Soil water content
     temp_WC <- WC_daily %>%
       filter(Summer == input$Summer, # input$Summer
+             Winter == input$Winter, # input$Winter
              # date >= as.Date("2020-07-01"),
              # date <= as.Date("2020-09-30")) %>%
              date >= input$date_range_selector[1],
              date <= input$date_range_selector[2]) %>%
-      group_by(Summer, date, Depth) %>%
+      group_by(Summer, Winter, date, Depth) %>%
       summarize(mean_WC_mean = mean(WC_mean, na.rm = TRUE),
                 mean_WC_min = mean(WC_min,  na.rm = TRUE),
                 mean_WC_max = mean(WC_max,  na.rm = TRUE), 
