@@ -49,13 +49,14 @@ treats <- read.csv("data/treatments.csv") %>%
 # Label with Hydrologic year and season
 season <- data.frame(Year = c(2019,
                               rep(2020, 4),
-                              rep(2021, 4)),
+                              rep(2021, 4),
+                              rep(2022, 4)),
                      Season = c("Growing",
-                                rep(c("Winter", "Spring", "Premonsoon", "Growing"), 2)),
+                                rep(c("Winter", "Spring", "Premonsoon", "Growing"), 3)),
                      st = c("07-01",
-                            rep(c("11-01", "02-01", "05-01", "07-01"), 2)),
+                            rep(c("11-01", "02-01", "05-01", "07-01"), 3)),
                      en = c("10-31",
-                            rep(c("01-31", "04-30", "06-30", "10-31"), 2))) %>%
+                            rep(c("01-31", "04-30", "06-30", "10-31"), 3))) %>%
   mutate(en = as.Date(paste0(Year, "-", en)),
          st = case_when(Season == "Winter" ~ as.Date(paste0(as.numeric(Year) - 1, "-", st)),
                         Season %in% c("Spring", "Premonsoon", "Growing") ~ as.Date(paste0(Year, "-", st))),
@@ -64,7 +65,7 @@ season <- data.frame(Year = c(2019,
 
 
 # Read in half-hourly soil temperature (Ts) 
-Ts <- read.csv("data/Halfhourly_TS_112721.csv") %>%
+Ts <- read.csv("data/Halfhourly_TS_010123.csv") %>%
   mutate(TIMESTAMP = as.POSIXct(TIMESTAMP),
          date = as.Date(TIMESTAMP)) %>%
   rename(dt = TIMESTAMP) %>%
@@ -78,7 +79,7 @@ Ts <- read.csv("data/Halfhourly_TS_112721.csv") %>%
   left_join(treats, by = c("House", "Plot"))
 
 # Read in half-hourly volumetric water content (WC) 
-WC <- read.csv("data/Halfhourly_VWC_SWP_Weather_112721.csv") %>%
+WC <- read.csv("data/Halfhourly_VWC_SWP_Weather_010123.csv") %>%
   dplyr::select(-T_inside, -RH_inside, -T_outside, -RH_outside) %>%
   mutate(TIMESTAMP = as.POSIXct(TIMESTAMP),
          date = as.Date(TIMESTAMP)) %>%
@@ -94,7 +95,7 @@ WC <- read.csv("data/Halfhourly_VWC_SWP_Weather_112721.csv") %>%
   left_join(treats, by = c("House", "Plot"))
 
 # Read in half-hourly atmospheric variables (Ta)
-Ta <- read.csv("data/Halfhourly_VWC_SWP_Weather_112721.csv") %>%
+Ta <- read.csv("data/Halfhourly_VWC_SWP_Weather_010123.csv") %>%
   dplyr::select(TIMESTAMP, T_inside, RH_inside, T_outside, RH_outside) %>%
   mutate(TIMESTAMP = as.POSIXct(TIMESTAMP),
          date = as.Date(TIMESTAMP),
