@@ -47,7 +47,7 @@ treats <- read.csv("data/treatments.csv") %>%
          Winter = factor(Winter, levels = c("W1", "W2", "W3")))
 
 # Label with Hydrologic year and season
-season <- data.frame(Year = c(2019,
+season <- data.frame(Year = c(2019,                              
                               rep(2020, 4),
                               rep(2021, 4),
                               rep(2022, 4)),
