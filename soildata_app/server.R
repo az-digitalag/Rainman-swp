@@ -1,114 +1,5 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#packages needed
-library(tidyverse)
-library(shiny)
-library(ggplot2)
-library(ggthemes)
-library(cowplot)
-
-# First tab: Seasonal timeseries by treatment
-load("soilTempDaily.Rdata")
-load("soilWaterContentDaily.Rdata")
-load("airTempDaily.Rdata")
-load("comboDaily.Rdata") # combo, now includes column for precip
-load("season.Rdata")
-
-# Third tab: Compare SWP and VWC by plot and depth
-load("soilWPWCDaily.Rdata")
-
-# initialize global variable to record clicked rows
-selected_points <- WPWC_daily[0,]
-
-# Define UI for application with three tabs
-ui <- navbarPage("RainManSR",
-  tabPanel("Daily time series",
-           titlePanel("Explore by treatment and season"),
-           # Sidebar with drop down input for treatments, times, and date ranges
-           sidebarLayout(
-             sidebarPanel(
-               # Select Summer treatment
-               selectInput(inputId = "Summer",
-                           label = "Select summer treatment",
-                           choices = levels(Ts_daily$Summer)),
-               # # Select Winter treatment
-               selectInput(inputId = "Winter",
-                            label = "Select winter treatment",
-                            choices = unique(Ts_daily$Winter)),
-               # Select Year
-               selectInput(inputId = "Year",
-                           label = "Select hydrological year", 
-                           choices = unique(season$Year)), 
-               # Select Season
-               uiOutput("dyn_season"),
-               # Select range of dates
-               uiOutput("dyn_slider")
-             ),
-             # Show a size plot for selected species
-             mainPanel(
-               h4("Mean over plots by treatment"),
-               fluidRow(plotOutput("seasonal_ts", width = "100%", height = "800px")),
-               h5("For top two panels, error bars represent the range from the mean minimum to the mean maximum across plots of the same treatment. "),
-               h5("For the bottom panel, error bars represent the daily range in varaiables. ")
-             )
-           )),
-  tabPanel("Compare treatments",
-           titlePanel("VWC by treatment type and year"),
-           # Sidebar with drop down input for treatments, times, and date ranges
-           sidebarLayout(
-             sidebarPanel(
-               # Select treatment
-               selectInput(inputId = "Treatment",
-                           label = "Select treatment type",
-                           choices = c("Summer", "Winter")),
-               # Select Year
-               selectInput(inputId = "Year1",
-                           label = "Select hydrological year", 
-                           choices = unique(season$Year)),
-               # Select range of dates
-               uiOutput("dyn_slider1")
-             ),
-             # Show a size plot for selected species
-             mainPanel(
-               fluidRow(plotOutput("treatment_ts", width = "100%", height = "800px"))
-             )
-           )),
-  tabPanel("Compare SWP and VWC",
-           titlePanel("Relationships by treatment and year"),
-           sidebarLayout(
-             sidebarPanel(
-               # Select Plot from House 3
-               selectInput(inputId = "Summer2",
-                           label = "Select summer treatment",
-                           choices = unique(WPWC_daily$Summer)),
-               # Select Year
-               selectInput(inputId = "Year2",
-                           label = "Select hydrological year", 
-                           choices = unique(season$Year)), 
-               # Select range of dates
-               uiOutput("dyn_slider2")
-             ),
-             
-             # Show a size plot for selected species
-             mainPanel(
-               h5('Click on point to obtain values. '),
-               fluidRow(plotOutput("WPWC_scatter", 
-                                   width = "100%", 
-                                   height = "300px",
-                                   click = clickOpts("plot_click"))),
-               uiOutput("click_info"),
-               fluidRow(plotOutput("WPWC_ts", width = "100%", height = "500px"))
-             )
-           ))
-)
-
-
-server <- function(input, output) {
+# server
+shinyServer(function(input, output) {
   
   # Render a UI for selecting Season
   output$dyn_season <- renderUI({
@@ -134,7 +25,7 @@ server <- function(input, output) {
                           temp$en))
   })
   
-
+  
   # Render a UI for selecting date range, tab2
   output$dyn_slider1 <- renderUI({
     temp <- season %>%
@@ -146,7 +37,7 @@ server <- function(input, output) {
                 value = c(min(temp$st),
                           max(temp$en)))
   })
-
+  
   
   # Render a UI for selecting date range tab 3
   output$dyn_slider2 <- renderUI({
@@ -182,8 +73,8 @@ server <- function(input, output) {
       group_by(Depth) %>%
       summarize(n_plots = max(n)) %>%
       mutate(depth_char = case_when(Depth == 1 ~ "0-12 cm",
-                               Depth == 2 ~ "25 cm",
-                               Depth == 3 ~ "75 cm"),
+                                    Depth == 2 ~ "25 cm",
+                                    Depth == 3 ~ "75 cm"),
              depth_label = paste0(depth_char, " (n = ", n_plots, ")"))
     
     temp_irig <- combo %>%
@@ -412,7 +303,7 @@ server <- function(input, output) {
               align = "v")
     
   })
-
+  
   # Function for comparing all treatments by year
   output$treatment_ts <- renderPlot({
     temp_irig <- combo %>%
@@ -571,14 +462,14 @@ server <- function(input, output) {
   
   # Select clicked points 1 at a time
   observe({
-
+    
     selected_points <<- rbind(selected_points,
                               nearPoints(WPWC_daily, input$plot_click,
                                          threshold = 5, maxpoints = 1, addDist = TRUE))
-
+    
     selected_points <<- tail(selected_points, 1)
     dim(selected_points)
-
+    
   })
   
   output$WPWC_ts <- renderPlot({
@@ -598,23 +489,23 @@ server <- function(input, output) {
              irrigation_mm = ifelse(is.na(irrigation_mm), 0, irrigation_mm))
     
     ratio1 <- if(nrow(temp_irig) == 0) { 1
-      } else {min(temp_WPWC$WP_min, na.rm = TRUE) / 
-          max(max(temp_irig$irrigation_mm,  na.rm = TRUE),
-              max(temp_irig$ppt_mm, na.rm = TRUE),
-              na.rm = TRUE)}
+    } else {min(temp_WPWC$WP_min, na.rm = TRUE) / 
+        max(max(temp_irig$irrigation_mm,  na.rm = TRUE),
+            max(temp_irig$ppt_mm, na.rm = TRUE),
+            na.rm = TRUE)}
     
     ratio2 <- if(nrow(temp_irig) == 0) { 1
-      } else {max(temp_WPWC$WC_max, na.rm = TRUE) / 
-          max(max(temp_irig$irrigation_mm,  na.rm = TRUE),
-              max(temp_irig$ppt_mm, na.rm = TRUE),
-              na.rm = TRUE)}
+    } else {max(temp_WPWC$WC_max, na.rm = TRUE) / 
+        max(max(temp_irig$irrigation_mm,  na.rm = TRUE),
+            max(temp_irig$ppt_mm, na.rm = TRUE),
+            na.rm = TRUE)}
     
     # For controlling whether/how many watering inputs are present
     color_ind <- if(nrow(temp_irig) == 0) { 0 } else { 2 }
     # For controlling fill when no irrigation or precip present
     fill_ind <- if(nrow(temp_irig) == 0) { 0 } else { 1 }
     
-
+    
     fig_WP <- ggplot() +
       geom_bar(data = temp_irig,
                aes(x = date, y = irrigation_mm*ratio1,
@@ -709,23 +600,23 @@ server <- function(input, output) {
               ncol = 1,
               align = "v")
   })
-
+  
   output$WPWC_scatter <- renderPlot({
-
+    
     temp_scatter <- WPWC_daily %>%
       filter(Summer == input$Summer2,
              date >= input$date_range_selector2[1],
              date <= input$date_range_selector2[2]) 
     
-      # Lookup table for facet labels
-      depths <- c(
-        `1` = "shallow",
-        `2` = "25 cm",
-        `3` = "75 cm"
-      )
-
-      ggplot(temp_scatter,
-             mapping = aes(x = WC_mean, y = WP_mean, color = as.factor(Depth))) +
+    # Lookup table for facet labels
+    depths <- c(
+      `1` = "shallow",
+      `2` = "25 cm",
+      `3` = "75 cm"
+    )
+    
+    ggplot(temp_scatter,
+           mapping = aes(x = WC_mean, y = WP_mean, color = as.factor(Depth))) +
       geom_errorbar(aes(ymin = WP_min, ymax = WP_max), 
                     width = 0, 
                     alpha = 0.3) +
@@ -780,7 +671,4 @@ server <- function(input, output) {
       p(HTML(tooltip))
     )
   })
-}
-
-# Run the application 
-shinyApp(ui = ui, server = server)
+})
