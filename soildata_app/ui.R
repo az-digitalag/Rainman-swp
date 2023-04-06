@@ -2,8 +2,8 @@
 
 # Define UI for application with three tabs
 shinyUI(navbarPage("RainManSR",
-                   tabPanel("Daily time series",
-                            titlePanel("Explore by treatment and season"),
+                   tabPanel("Explore time series",
+                            titlePanel("Soil and air variables by treatment"),
                             # Sidebar with drop down input for treatments, times, and date ranges
                             sidebarLayout(
                               sidebarPanel( width = 3,
@@ -41,10 +41,10 @@ shinyUI(navbarPage("RainManSR",
                               )
                             )),
                    tabPanel("Compare treatments",
-                            titlePanel("VWC by treatment type and year"),
+                            titlePanel("VWC by treatment"),
                             # Sidebar with drop down input for treatments, times, and date ranges
                             sidebarLayout(
-                              sidebarPanel(
+                              sidebarPanel(width = 3, 
                                 # Select treatment
                                 selectInput(inputId = "Treatment",
                                             label = "Select treatment type:",
@@ -63,9 +63,9 @@ shinyUI(navbarPage("RainManSR",
                               )
                             )),
                    tabPanel("Compare SWP and VWC",
-                            titlePanel("Relationships by treatment and year"),
+                            titlePanel("Empirical time series"),
                             sidebarLayout(
-                              sidebarPanel(
+                              sidebarPanel(width = 3,
                                 # Select Plot from House 3
                                 selectInput(inputId = "Summer2",
                                             label = "Select summer treatment:",
@@ -74,27 +74,21 @@ shinyUI(navbarPage("RainManSR",
                                 selectInput(inputId = "Year2",
                                             label = "Select hydrological year:", 
                                             choices = unique(season$Year),
-                                            selected = 2022), 
-                                # Select range of dates
-                                uiOutput("dyn_slider2")
+                                            selected = 2022)
                               ),
-                              
-                              # Show a size plot for selected species
                               mainPanel(
-                                tabsetPanel(type = "tabs",
-                                            tabPanel("Timeseries", 
-                                                     fluidRow(plotOutput("WPWC_ts", width = "100%", height = "500px"))
-                                                     ),
-                                            tabPanel("Bivariate",
-                                                     h5('Click on point to obtain values. '),
-                                                     fluidRow(plotOutput("WPWC_scatter", 
-                                                                         width = "100%", 
-                                                                         height = "300px",
-                                                                         click = clickOpts("plot_click"))),
-                                                     uiOutput("click_info")))
-                                
-                                
+                                # Select range of dates
+                                uiOutput("dyn_slider2"),
+                                fluidRow(plotOutput("WPWC_ts", width = "100%", height = "400px"))
+                                # h4('Click on point to obtain values. '),
+                                # fluidRow(plotOutput("WPWC_scatter", 
+                                #                     width = "100%", 
+                                #                     height = "300px",
+                                #                     click = clickOpts("plot_click"))),
+                                # uiOutput("click_info")
                               )
+                              
+                  
                             ))
 )
 )

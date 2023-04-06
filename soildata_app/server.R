@@ -63,7 +63,8 @@ shinyServer(function(input, output) {
                 min = min(temp$st),
                 max = max(temp$en),
                 value = c(min(temp$st),
-                          max(temp$en)))
+                          max(temp$en)),
+                width = '100%')
   })
   
   # Function for plotting the first tab
@@ -315,7 +316,7 @@ shinyServer(function(input, output) {
       guides(color = guide_legend(
         override.aes = list(linetype = c(0, 0))))
     
-    plot_grid(fig_a, fig_b, fig_c,
+    plot_grid(fig_b, fig_a, fig_c,
               ncol = 1, 
               align = "v")
     
@@ -495,19 +496,19 @@ shinyServer(function(input, output) {
   })
   
   output$WPWC_ts <- renderPlot({
-    input$plot_click
+    # input$plot_click
     
     req(input$Summer2)
     req(input$date_range_selector2)
     
     temp_WPWC <- WPWC_daily %>%
-      filter(Summer == input$Summer2,
+      filter(Summer == input$Summer2, # "S1"
              date >= input$date_range_selector2[1],
              date <= input$date_range_selector2[2]) %>%
       mutate(Depth = as.factor(Depth))
     
     temp_irig <- combo %>%
-      filter(Summer == input$Summer2,
+      filter(Treatment == input$Summer2, # input$Summer2
              date >= input$date_range_selector2[1],
              date <= input$date_range_selector2[2]) %>%
       mutate(ppt_mm = ifelse(is.na(ppt_mm), 0, ppt_mm),
@@ -557,16 +558,15 @@ shinyServer(function(input, output) {
                      y = WP_mean, 
                      color = Depth),
                  size = 3) +
-      geom_point(data = selected_points, 
-                 aes(x = date,
-                     y = WP_mean),
-                 color = "black", size = 4)+
+      # geom_point(data = selected_points, 
+      #            aes(x = date,
+      #                y = WP_mean),
+      #            color = "black", size = 4) +
       scale_y_continuous(expression(paste(Psi[soil], " (MPa)")),
                          limits = c(NA, 0),
                          sec.axis = sec_axis(~./ratio1,
                                              name = "Watering (mm)")) +
-      scale_x_date(date_labels = "%b %d",
-                   date_breaks = "1 month") +
+      scale_x_date(date_labels = "%b %d") +
       theme_bw(base_size = 16) +
       scale_fill_manual(values = c("lightblue", "gray")[1:color_ind]) +
       scale_color_manual(labels = c("5 cm", "25 cm", "75 cm"),
@@ -602,16 +602,15 @@ shinyServer(function(input, output) {
                      y = WC_mean, 
                      color = Depth),
                  size = 3) +
-      geom_point(data = selected_points, 
-                 aes(x = date,
-                     y = WC_mean),
-                 color = "black", size = 4)+
+      # geom_point(data = selected_points, 
+      #            aes(x = date,
+      #                y = WC_mean),
+      #            color = "black", size = 4) +
       scale_y_continuous(expression(paste(Theta[soil], "( ", m^3, " ", m^-3, ")")),
                          limits = c(0, NA),
                          sec.axis = sec_axis(~./ratio2,
                                              name = "Watering (mm)")) +
-      scale_x_date(date_labels = "%b %d",
-                   date_breaks = "1 month") +
+      scale_x_date(date_labels = "%b %d") +
       theme_bw(base_size = 16) +
       scale_fill_manual(values = c("lightblue", "gray")[1:color_ind]) +
       scale_color_manual(labels = c("0-12 cm", "25 cm", "75 cm"),

@@ -18,4 +18,4 @@ load("season.Rdata")
 load("soilWPWCDaily.Rdata")
 
 # initialize global variable to record clicked rows
-selected_points <- WPWC_daily[0,]
+# selected_points <- WPWC_daily[0,]
