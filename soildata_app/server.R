@@ -3,22 +3,28 @@ shinyServer(function(input, output) {
   
   # Render a UI for selecting Season
   output$dyn_season <- renderUI({
+    req(input$Year) # no error message if non selected
+    
     temp <- season %>%
       filter(Year == input$Year) %>%
       pull(Season)
     
     selectInput(inputId = "Season",
-                label = "Select season", 
+                label = "Select season:", 
                 choices = temp)
   })
   
   # Render a UI for selecting date range, landing page
   output$dyn_slider <- renderUI({
+    # no error message if inputs not selected
+    req(input$Year)
+    req(input$Season)
+    
     temp <- season %>%
       filter(Year == input$Year,
              Season == input$Season)
     sliderInput(inputId = "date_range_selector", 
-                label = "Select Date Range", 
+                label = "Select date range:", 
                 min = temp$st,
                 max = temp$en,
                 value = c(temp$st,
@@ -28,10 +34,13 @@ shinyServer(function(input, output) {
   
   # Render a UI for selecting date range, tab2
   output$dyn_slider1 <- renderUI({
+    # no error message if inputs not selected
+    req(input$Year1)
+    
     temp <- season %>%
       filter(Year == input$Year1)
     sliderInput(inputId = "date_range_selector1", 
-                label = "Select Date Range", 
+                label = "Select date range:", 
                 min = min(temp$st),
                 max = max(temp$en),
                 value = c(min(temp$st),
@@ -41,10 +50,13 @@ shinyServer(function(input, output) {
   
   # Render a UI for selecting date range tab 3
   output$dyn_slider2 <- renderUI({
+    # no error message if inputs not selected
+    req(input$Year2)
+    
     temp <- season %>%
       filter(Year == input$Year2)
     sliderInput(inputId = "date_range_selector2", 
-                label = "Select Date Range", 
+                label = "Select date range:", 
                 min = min(temp$st),
                 max = max(temp$en),
                 value = c(min(temp$st),
@@ -54,15 +66,20 @@ shinyServer(function(input, output) {
   # Function for plotting the first tab
   # Daily timeseries of all variables by treatment and season
   output$seasonal_ts <- renderPlot({
+    # no error message if inputs not selected
+    req(input$Summer)
+    req(input$Winter)
+    req(input$date_range_selector)
+    
     # Soil Temp
     temp_soilT <- Ts_daily %>%
-      filter(Summer == input$Summer, # input$Summer
-             Winter == input$Winter,
+      filter(Summer %in% input$Summer, # input$Summer
+             Winter %in% input$Winter, # input$Winter
              # date >= as.Date("2020-06-01"),
              # date <= as.Date("2020-09-30")) %>%
              date >= input$date_range_selector[1],
              date <= input$date_range_selector[2]) %>%
-      group_by(Summer, Winter, date, Depth) %>%
+      group_by(date, Depth) %>% # Winter? Summer?
       summarize(mean_Ts_mean = mean(Ts_mean, na.rm = TRUE),
                 mean_Ts_min = mean(Ts_min,  na.rm = TRUE),
                 mean_Ts_max = mean(Ts_max,  na.rm = TRUE),
@@ -78,7 +95,7 @@ shinyServer(function(input, output) {
              depth_label = paste0(depth_char, " (n = ", n_plots, ")"))
     
     temp_irig <- combo %>%
-      filter(Summer == input$Summer, # input$Summer
+      filter(Treatment %in% c(input$Summer, input$Winter), # input$Summer
              # date >= as.Date("2020-07-01"),
              # date <= as.Date("2020-09-30")) %>%
              date >= input$date_range_selector[1],
@@ -148,13 +165,13 @@ shinyServer(function(input, output) {
     
     #  Soil water content
     temp_WC <- WC_daily %>%
-      filter(Summer == input$Summer, # input$Summer
-             Winter == input$Winter, # input$Winter
+      filter(Summer %in% input$Summer, # input$Summer
+             Winter %in% input$Winter, # input$Winter
              # date >= as.Date("2020-07-01"),
              # date <= as.Date("2020-09-30")) %>%
              date >= input$date_range_selector[1],
              date <= input$date_range_selector[2]) %>%
-      group_by(Summer, Winter, date, Depth) %>%
+      group_by(date, Depth) %>% # Winter, Summer
       summarize(mean_WC_mean = mean(WC_mean, na.rm = TRUE),
                 mean_WC_min = mean(WC_min,  na.rm = TRUE),
                 mean_WC_max = mean(WC_max,  na.rm = TRUE), 
@@ -306,21 +323,25 @@ shinyServer(function(input, output) {
   
   # Function for comparing all treatments by year
   output$treatment_ts <- renderPlot({
+    # no error message if inputs not selected
+    req(input$Treatment)
+    req(input$date_range_selector)
+    
     temp_irig <- combo %>%
-      # filter(date >= as.Date("2020-07-01"),
-      #        date <= as.Date("2020-10-31"))
-      filter(date >= input$date_range_selector1[1],
-             date <= input$date_range_selector1[2])
+      filter(date >= as.Date("2020-07-01"),
+             date <= as.Date("2020-10-31"))
+      # filter(date >= input$date_range_selector1[1],
+      #        date <= input$date_range_selector1[2])
     
     temp_VWC <- WC_daily %>%
-      filter(date >= input$date_range_selector1[1],
-             date <= input$date_range_selector1[2]) %>%
-      # filter(date >= as.Date("2020-07-01"),
-      #        date <= as.Date("2020-10-31")) %>%
+      # filter(date >= input$date_range_selector1[1],
+      #        date <= input$date_range_selector1[2]) %>%
+      filter(date >= as.Date("2020-07-01"),
+             date <= as.Date("2020-10-31")) %>%
       tidyr::pivot_longer(cols = Summer:Winter,
                           names_to = "treatType",
                           values_to = "Treatment") %>%
-      filter(treatType == input$Treatment) %>% # input$Treatment
+      filter(treatType == "Summer") %>% # input$Treatment
       group_by(Treatment, date, Depth) %>%
       summarize(mean_WC_mean = mean(WC_mean),
                 mean_WC_min = mean(WC_min),
@@ -370,6 +391,10 @@ shinyServer(function(input, output) {
     # Mean treatment differences in WC, plot separately by depth
     n_1 <- temp_VWC_n %>%
       filter(depth_labs == "0-12 cm")
+    # color vec dependent on input$Treatment for depths 25 and 75 only
+    colvec <- ifelse(input$Treatment == "Summer", 
+                     c("dodgerblue4","cyan2", "sandybrown"),
+                     c("dodgerblue4","cyan2","gold",))
     fig_WC_1 <- temp_VWC %>%
       filter(Depth == 1) %>%
       ggplot(aes(x = date, y = mean_WC_mean, color = Treatment)) + #
@@ -408,10 +433,7 @@ shinyServer(function(input, output) {
       scale_x_date(date_labels = "%b %d",
                    date_breaks = "1 month") +
       scale_color_manual(labels = n_2$depth_label,
-                         values = c("dodgerblue4",
-                                    "cyan2",
-                                    # "gold",
-                                    "sandybrown")) +
+                         values = colvec) +
       theme_bw(base_size = 16) +
       theme(axis.title.x = element_blank(),
             strip.background = element_blank(),
@@ -433,10 +455,7 @@ shinyServer(function(input, output) {
       scale_x_date(date_labels = "%b %d",
                    date_breaks = "1 month") +
       scale_color_manual(labels = n_3$depth_label,
-                         values = c("dodgerblue4",
-                                    "cyan2",
-                                    # "gold",
-                                    "sandybrown")) +
+                         values = colvec) +
       theme_bw(base_size = 16) +
       theme(axis.title.x = element_blank(),
             strip.background = element_blank(),
@@ -474,6 +493,9 @@ shinyServer(function(input, output) {
   
   output$WPWC_ts <- renderPlot({
     input$plot_click
+    
+    req(input$Summer2)
+    req(input$date_range_selector2)
     
     temp_WPWC <- WPWC_daily %>%
       filter(Summer == input$Summer2,
