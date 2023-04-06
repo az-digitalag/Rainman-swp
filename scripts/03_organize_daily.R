@@ -13,8 +13,9 @@ library(fuzzyjoin)
 # Read in irrigation dates
 irig <- read_csv("data/irrigation.csv") %>%
   tidyr::pivot_longer(-date, 
-                      names_to = "Summer", 
+                      names_to = "Treatment", 
                       values_to = "irrigation_mm") %>%
+  drop_na() %>%
   mutate(date = as.Date(date, format = "%m/%d/%Y"))
 
 
@@ -29,16 +30,16 @@ ppt <- read_csv("data/Daily_Raingage_02262022.csv") %>%
          ppt_mm != 0)
 
 add_trt <- function(trt, df) {
-  df$Summer <- trt
+  df$Treatment <- trt
   df
 }
-ppt_trt <- map_dfr(c("S1", "S2", "S3", "S4"),
+ppt_trt <- map_dfr(c("S1", "S2", "S3", "S4", "W1", "W2", "W3"),
                     add_trt,
                     df = ppt) %>%
   arrange(date)
 
-combo <- full_join(irig, ppt_trt) %>%
-  arrange(date, Summer)
+combo <- full_join(irig, ppt_trt, by = c("date", "Treatment")) %>%
+  arrange(date, Treatment)
 
 
 # Read in treatments for each house/plot combination
@@ -50,13 +51,14 @@ treats <- read.csv("data/treatments.csv") %>%
 season <- data.frame(Year = c(2019,                              
                               rep(2020, 4),
                               rep(2021, 4),
-                              rep(2022, 4)),
+                              rep(2022, 4),
+                              rep(2023, 4)),
                      Season = c("Growing",
-                                rep(c("Winter", "Spring", "Premonsoon", "Growing"), 3)),
+                                rep(c("Winter", "Spring", "Premonsoon", "Growing"), 4)),
                      st = c("07-01",
-                            rep(c("11-01", "02-01", "05-01", "07-01"), 3)),
+                            rep(c("11-01", "02-01", "05-01", "07-01"), 4)),
                      en = c("10-31",
-                            rep(c("01-31", "04-30", "06-30", "10-31"), 3))) %>%
+                            rep(c("01-31", "04-30", "06-30", "10-31"), 4))) %>%
   mutate(en = as.Date(paste0(Year, "-", en)),
          st = case_when(Season == "Winter" ~ as.Date(paste0(as.numeric(Year) - 1, "-", st)),
                         Season %in% c("Spring", "Premonsoon", "Growing") ~ as.Date(paste0(Year, "-", st))),
