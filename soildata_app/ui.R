@@ -6,7 +6,7 @@ shinyUI(navbarPage("RainManSR",
                             titlePanel("Explore by treatment and season"),
                             # Sidebar with drop down input for treatments, times, and date ranges
                             sidebarLayout(
-                              sidebarPanel(
+                              sidebarPanel( width = 3,
                                 # Select Summer treatment
                                 selectInput(inputId = "Summer",
                                             label = "Select summer treatment(s):",
@@ -25,15 +25,17 @@ shinyUI(navbarPage("RainManSR",
                                             choices = unique(season$Year),
                                             selected = 2022), 
                                 # Select Season
-                                uiOutput("dyn_season"),
-                                # Select range of dates
-                                uiOutput("dyn_slider")
+                                uiOutput("dyn_season")
                               ),
                               # Show a size plot for selected species
                               mainPanel(
                                 h3("Mean by treatment(s)"),
-                                fluidRow(plotOutput("seasonal_ts", 
-                                                    width = "100%", height = "800px")),
+                                fluidRow(
+                                  # Select range of dates
+                                  uiOutput("dyn_slider"),
+                                  # Plot time series
+                                  plotOutput("seasonal_ts",
+                                             width = "100%", height = "600px")),
                                 h5("Top two panels: error bars represent the range from the mean minimum to the mean maximum across plots."),
                                 h5("Bottom panel: error bars represent the daily range in varaiables. ")
                               )
@@ -51,12 +53,12 @@ shinyUI(navbarPage("RainManSR",
                                 selectInput(inputId = "Year1",
                                             label = "Select hydrological year:", 
                                             choices = unique(season$Year),
-                                            selected = 2022),
-                                # Select range of dates
-                                uiOutput("dyn_slider1")
+                                            selected = 2022)
                               ),
                               # Show a size plot for selected species
                               mainPanel(
+                                # Select range of dates
+                                uiOutput("dyn_slider1"),
                                 fluidRow(plotOutput("treatment_ts", width = "100%", height = "800px"))
                               )
                             )),

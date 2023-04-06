@@ -28,7 +28,9 @@ shinyServer(function(input, output) {
                 min = temp$st,
                 max = temp$en,
                 value = c(temp$st,
-                          temp$en))
+                          temp$en),
+                ticks = TRUE,
+                width = '100%')
   })
   
   
@@ -44,7 +46,8 @@ shinyServer(function(input, output) {
                 min = min(temp$st),
                 max = max(temp$en),
                 value = c(min(temp$st),
-                          max(temp$en)))
+                          max(temp$en)),
+                width = '100%')
   })
   
   
@@ -149,8 +152,7 @@ shinyServer(function(input, output) {
                          limits = c(0, NA),
                          sec.axis = sec_axis(~.*ratio1,
                                              name = "Watering (mm)")) +
-      scale_x_date(date_labels = "%b %d",
-                   date_breaks = "1 week") +
+      scale_x_date(date_labels = "%b %d") +
       theme_bw(base_size = 16) +
       scale_fill_manual(values = c("lightblue", "gray")[1:color_ind]) +
       scale_color_manual(labels = temp_soilT_n$depth_label[unique(temp_soilT$Depth)], 
@@ -226,8 +228,7 @@ shinyServer(function(input, output) {
                          limits = c(0, NA),
                          sec.axis = sec_axis(~.*ratio2,
                                              name = "Watering (mm)")) +
-      scale_x_date(date_labels = "%b %d",
-                   date_breaks = "1 week") + 
+      scale_x_date(date_labels = "%b %d") + 
       theme_bw(base_size = 16) +
       scale_fill_manual(values = c("lightblue", "gray")[1:color_ind]) +
       scale_color_manual(labels = temp_WC_n$depth_label[unique(temp_WC$Depth)], 
@@ -303,8 +304,7 @@ shinyServer(function(input, output) {
                          limits = c(0, NA),
                          sec.axis = sec_axis(~.*ratio3,
                                              name = "VPD (kPa)")) +
-      scale_x_date(date_labels = "%b %d",
-                   date_breaks = "1 week") + 
+      scale_x_date(date_labels = "%b %d") + 
       theme_bw(base_size = 16) +
       scale_color_manual(values = c("#67aeca", "#cda34f")) +
       theme(axis.title.x = element_blank(),
@@ -325,23 +325,22 @@ shinyServer(function(input, output) {
   output$treatment_ts <- renderPlot({
     # no error message if inputs not selected
     req(input$Treatment)
-    req(input$date_range_selector)
+    req(input$date_range_selector1)
     
     temp_irig <- combo %>%
-      filter(date >= as.Date("2020-07-01"),
-             date <= as.Date("2020-10-31"))
-      # filter(date >= input$date_range_selector1[1],
-      #        date <= input$date_range_selector1[2])
+      # filter(date >= as.Date("2021-11-01"),
+      #        date <= as.Date("2022-10-31"))
+      filter(date >= input$date_range_selector1[1],
+             date <= input$date_range_selector1[2])
     
     temp_VWC <- WC_daily %>%
-      # filter(date >= input$date_range_selector1[1],
-      #        date <= input$date_range_selector1[2]) %>%
-      filter(date >= as.Date("2020-07-01"),
-             date <= as.Date("2020-10-31")) %>%
-      tidyr::pivot_longer(cols = Summer:Winter,
+      filter(date >= input$date_range_selector1[1],
+             date <= input$date_range_selector1[2]) %>%
+      # filter(date >= as.Date("2021-11-01"),
+      #        date <= as.Date("2022-10-31")) %>%
+      tidyr::pivot_longer(cols = input$Treatment, # input$Treatment
                           names_to = "treatType",
                           values_to = "Treatment") %>%
-      filter(treatType == "Summer") %>% # input$Treatment
       group_by(Treatment, date, Depth) %>%
       summarize(mean_WC_mean = mean(WC_mean),
                 mean_WC_min = mean(WC_min),
@@ -358,10 +357,15 @@ shinyServer(function(input, output) {
       mutate(depth_label = paste0(Treatment, " (n = ", n_plots, ")"))
     
     # Irrigation amounts comparison
+    # named color vector for diff treatments and precip
+    irigvec <- c("Precipitation" = "gray", 
+                 "S1" = "dodgerblue4", "S2" = "cyan2", "S3" = "gold", "S4" = "sandybrown",
+                 "W1" = "#89c3e5","W2" = "#4ea5d8","W3" = "#2b556d")
+                     
     fig_irig <- ggplot(temp_irig) +
       geom_bar(aes(x = date, 
                    y = irrigation_mm, 
-                   fill = Summer),
+                   fill = Treatment),
                stat = "identity",
                position = "dodge",
                width = 1) +
@@ -376,11 +380,7 @@ shinyServer(function(input, output) {
       scale_x_date(date_labels = "%b %d",
                    date_breaks = "1 month",
                    limits = c(min(temp_VWC$date), NA)) +
-      scale_fill_manual(values = c("gray",
-                                   "dodgerblue4",
-                                   "cyan2",
-                                   "gold",
-                                   "sandybrown")) +
+      scale_fill_manual(values = irigvec) +
       theme_bw(base_size = 16) +
       theme(axis.title.x = element_blank(),
             strip.background = element_blank(),
@@ -391,10 +391,19 @@ shinyServer(function(input, output) {
     # Mean treatment differences in WC, plot separately by depth
     n_1 <- temp_VWC_n %>%
       filter(depth_labs == "0-12 cm")
-    # color vec dependent on input$Treatment for depths 25 and 75 only
-    colvec <- ifelse(input$Treatment == "Summer", 
-                     c("dodgerblue4","cyan2", "sandybrown"),
-                     c("dodgerblue4","cyan2","gold",))
+    
+    # color vec dependent on input$Treatment for top
+    vwcvec <- c("S1" = "dodgerblue4", "S2" = "cyan2", "S3" = "gold", "S4" = "sandybrown",
+                "W1" = "#89c3e5","W2" = "#4ea5d8","W3" = "#2b556d")
+    # if(input$Treatment == "Summer") {
+    #   vec_shallow <- c("dodgerblue4","cyan2", "gold", "sandybrown")
+    # } else { vec_shallow  <- c("#89c3e5","#4ea5d8","#2b556d")}
+    # 
+    # # color vec dependent on input$Treatment for depths 25 and 75 only
+    #  if(input$Treatment == "Summer") {
+    #    ved_middeep <- c("dodgerblue4","cyan2", "sandybrown")
+    #  } else { ved_middeep <- c("#89c3e5","#4ea5d8","#2b556d")}
+    #                 
     fig_WC_1 <- temp_VWC %>%
       filter(Depth == 1) %>%
       ggplot(aes(x = date, y = mean_WC_mean, color = Treatment)) + #
@@ -404,13 +413,9 @@ shinyServer(function(input, output) {
                     alpha = 0.3) +
       geom_point(size = 3) +
       # scale_y_continuous(expression(paste(Theta[soil], "( ", m^3, " ", m^-3, ")"))) +
-      scale_x_date(date_labels = "%b %d",
-                   date_breaks = "1 month") +
+      scale_x_date(date_labels = "%b %d") +
       scale_color_manual(labels = n_1$depth_label,
-                         values = c("dodgerblue4",
-                                    "cyan2",
-                                    "gold",
-                                    "sandybrown")) +
+                         values = vwcvec) +
       theme_bw(base_size = 16) +
       theme(axis.title.x = element_blank(),
             strip.background = element_blank(),
@@ -430,10 +435,9 @@ shinyServer(function(input, output) {
                     alpha = 0.3) +
       geom_point(size = 3) +
       scale_y_continuous(expression(paste(Theta[soil], "( ", m^3, " ", m^-3, ")"))) +
-      scale_x_date(date_labels = "%b %d",
-                   date_breaks = "1 month") +
+      scale_x_date(date_labels = "%b %d") +
       scale_color_manual(labels = n_2$depth_label,
-                         values = colvec) +
+                         values = vwcvec) +
       theme_bw(base_size = 16) +
       theme(axis.title.x = element_blank(),
             strip.background = element_blank(),
@@ -452,10 +456,9 @@ shinyServer(function(input, output) {
                     alpha = 0.3) +
       geom_point(size = 3) +
       # scale_y_continuous(expression(paste(Theta[soil], "( ", m^3, " ", m^-3, ")"))) +
-      scale_x_date(date_labels = "%b %d",
-                   date_breaks = "1 month") +
+      scale_x_date(date_labels = "%b %d") +
       scale_color_manual(labels = n_3$depth_label,
-                         values = colvec) +
+                         values = vwcvec) +
       theme_bw(base_size = 16) +
       theme(axis.title.x = element_blank(),
             strip.background = element_blank(),
