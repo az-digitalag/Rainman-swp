@@ -508,7 +508,7 @@ shinyServer(function(input, output) {
       mutate(Depth = as.factor(Depth))
     
     temp_irig <- combo %>%
-      filter(Treatment == input$Summer2, # input$Summer2
+      filter(Treatment == input$Summer2 | Treatment == "W3", # input$Summer2
              date >= input$date_range_selector2[1],
              date <= input$date_range_selector2[2]) %>%
       mutate(ppt_mm = ifelse(is.na(ppt_mm), 0, ppt_mm),

@@ -78,6 +78,7 @@ shinyUI(navbarPage("RainManSR",
                               ),
                               mainPanel(
                                 # Select range of dates
+                                h5("Two plots (S1/W3 and S4/W3) were instrumented for both VWC and SWP"),
                                 uiOutput("dyn_slider2"),
                                 fluidRow(plotOutput("WPWC_ts", width = "100%", height = "400px"))
                                 # h4('Click on point to obtain values. '),
