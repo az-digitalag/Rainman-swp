@@ -35,7 +35,8 @@ shinyUI(navbarPage("RainManSR",
                                   uiOutput("dyn_slider"),
                                   # Plot time series
                                   plotOutput("seasonal_ts",
-                                             width = "100%", height = "600px")),
+                                             width = "100%", height = "800px")%>%
+                                    withSpinner(type = 8)),
                                 h5("Top two panels: error bars represent the range from the mean minimum to the mean maximum across plots."),
                                 h5("Bottom panel: error bars represent the daily range in varaiables. ")
                               )
@@ -59,7 +60,8 @@ shinyUI(navbarPage("RainManSR",
                               mainPanel(
                                 # Select range of dates
                                 uiOutput("dyn_slider1"),
-                                fluidRow(plotOutput("treatment_ts", width = "100%", height = "800px"))
+                                fluidRow(plotOutput("treatment_ts", width = "100%", height = "800px") %>%
+                                           withSpinner(type = 8))
                               )
                             )),
                    tabPanel("Compare SWP and VWC",
@@ -80,7 +82,8 @@ shinyUI(navbarPage("RainManSR",
                                 # Select range of dates
                                 h5("Two plots (S1/W3 and S4/W3) were instrumented for both VWC and SWP"),
                                 uiOutput("dyn_slider2"),
-                                fluidRow(plotOutput("WPWC_ts", width = "100%", height = "400px"))
+                                fluidRow(plotOutput("WPWC_ts", width = "100%", height = "500px")%>%
+                                           withSpinner(type = 8))
                                 # h4('Click on point to obtain values. '),
                                 # fluidRow(plotOutput("WPWC_scatter", 
                                 #                     width = "100%", 

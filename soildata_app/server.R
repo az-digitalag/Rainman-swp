@@ -483,17 +483,17 @@ shinyServer(function(input, output) {
     
   })
   
-  # Select clicked points 1 at a time
-  observe({
-    
-    selected_points <<- rbind(selected_points,
-                              nearPoints(WPWC_daily, input$plot_click,
-                                         threshold = 5, maxpoints = 1, addDist = TRUE))
-    
-    selected_points <<- tail(selected_points, 1)
-    dim(selected_points)
-    
-  })
+  # # Select clicked points 1 at a time
+  # observe({
+  #   
+  #   selected_points <<- rbind(selected_points,
+  #                             nearPoints(WPWC_daily, input$plot_click,
+  #                                        threshold = 5, maxpoints = 1, addDist = TRUE))
+  #   
+  #   selected_points <<- tail(selected_points, 1)
+  #   dim(selected_points)
+  #   
+  # })
   
   output$WPWC_ts <- renderPlot({
     # input$plot_click
@@ -625,74 +625,74 @@ shinyServer(function(input, output) {
               align = "v")
   })
   
-  output$WPWC_scatter <- renderPlot({
-    
-    temp_scatter <- WPWC_daily %>%
-      filter(Summer == input$Summer2,
-             date >= input$date_range_selector2[1],
-             date <= input$date_range_selector2[2]) 
-    
-    # Lookup table for facet labels
-    depths <- c(
-      `1` = "shallow",
-      `2` = "25 cm",
-      `3` = "75 cm"
-    )
-    
-    ggplot(temp_scatter,
-           mapping = aes(x = WC_mean, y = WP_mean, color = as.factor(Depth))) +
-      geom_errorbar(aes(ymin = WP_min, ymax = WP_max), 
-                    width = 0, 
-                    alpha = 0.3) +
-      geom_errorbarh(aes(xmin = WC_min, xmax = WC_max), 
-                     height = 0, 
-                     alpha = 0.3) +
-      geom_point(size = 3) +
-      scale_y_continuous(expression(paste(Psi, " (MPa)"))) +
-      scale_x_continuous(expression(paste(Theta, " (", m^3, " ", m^-3, ")"))) +
-      facet_wrap(~Depth,
-                 ncol = 3,
-                 labeller = labeller(Depth = depths)) +
-      theme_bw(base_size = 16) +
-      scale_color_manual(values = c("#52958b", "#494e6b", "#b9c4c9")) +
-      theme(strip.background = element_blank(),
-            panel.grid.major = element_blank(),
-            panel.grid.minor = element_blank()) +
-      guides(color = "none")
-  })
-  
-  # output$info <- renderPrint({
-  #   nearPoints(df = WPWC_daily, 
-  #              coordinfo = input$plot_click,
-  #              threshold = 15, maxpoints = NULL, addDist = TRUE)
+  # output$WPWC_scatter <- renderPlot({
+  #   
+  #   temp_scatter <- WPWC_daily %>%
+  #     filter(Summer == input$Summer2,
+  #            date >= input$date_range_selector2[1],
+  #            date <= input$date_range_selector2[2]) 
+  #   
+  #   # Lookup table for facet labels
+  #   depths <- c(
+  #     `1` = "shallow",
+  #     `2` = "25 cm",
+  #     `3` = "75 cm"
+  #   )
+  #   
+  #   ggplot(temp_scatter,
+  #          mapping = aes(x = WC_mean, y = WP_mean, color = as.factor(Depth))) +
+  #     geom_errorbar(aes(ymin = WP_min, ymax = WP_max), 
+  #                   width = 0, 
+  #                   alpha = 0.3) +
+  #     geom_errorbarh(aes(xmin = WC_min, xmax = WC_max), 
+  #                    height = 0, 
+  #                    alpha = 0.3) +
+  #     geom_point(size = 3) +
+  #     scale_y_continuous(expression(paste(Psi, " (MPa)"))) +
+  #     scale_x_continuous(expression(paste(Theta, " (", m^3, " ", m^-3, ")"))) +
+  #     facet_wrap(~Depth,
+  #                ncol = 3,
+  #                labeller = labeller(Depth = depths)) +
+  #     theme_bw(base_size = 16) +
+  #     scale_color_manual(values = c("#52958b", "#494e6b", "#b9c4c9")) +
+  #     theme(strip.background = element_blank(),
+  #           panel.grid.major = element_blank(),
+  #           panel.grid.minor = element_blank()) +
+  #     guides(color = "none")
   # })
-  
-  output$click_info <- renderUI({
-    click <- input$plot_click
-    point <- nearPoints(WPWC_daily, 
-                        click,
-                        threshold = 5, maxpoints = 1, addDist = TRUE)
-    
-    if (nrow(point) == 0) return(NULL)
-    
-    left_px <- click$coords_css$x
-    top_px <- click$coords_css$y
-    
-    # create style property for tooltip
-    # background color is set so tooltip is a bit transparent
-    # z-index is set so we are sure are tooltip will be on top
-    style <- paste0("position:absolute; z-index:100; background-color: rgba(245, 245, 245, 0.85); ",
-                    "left:", left_px + 1, 
-                    "px; top:", top_px + 1, "px;")
-    
-    # Write tooltip
-    tooltip <- paste0("<b> Date</b>: ", point$date,
-                      "<br> <b>Season</b>: ", point$Season,
-                      "<br> <b>&#x398;</b>: ", round(point$WC_mean, 3),
-                      "<br> <b>&#x3A8;</b>: ", round(point$WP_mean, 3))
-    wellPanel(
-      style = style,
-      p(HTML(tooltip))
-    )
-  })
+  # 
+  # # output$info <- renderPrint({
+  # #   nearPoints(df = WPWC_daily, 
+  # #              coordinfo = input$plot_click,
+  # #              threshold = 15, maxpoints = NULL, addDist = TRUE)
+  # # })
+  # 
+  # output$click_info <- renderUI({
+  #   click <- input$plot_click
+  #   point <- nearPoints(WPWC_daily, 
+  #                       click,
+  #                       threshold = 5, maxpoints = 1, addDist = TRUE)
+  #   
+  #   if (nrow(point) == 0) return(NULL)
+  #   
+  #   left_px <- click$coords_css$x
+  #   top_px <- click$coords_css$y
+  #   
+  #   # create style property for tooltip
+  #   # background color is set so tooltip is a bit transparent
+  #   # z-index is set so we are sure are tooltip will be on top
+  #   style <- paste0("position:absolute; z-index:100; background-color: rgba(245, 245, 245, 0.85); ",
+  #                   "left:", left_px + 1, 
+  #                   "px; top:", top_px + 1, "px;")
+  #   
+  #   # Write tooltip
+  #   tooltip <- paste0("<b> Date</b>: ", point$date,
+  #                     "<br> <b>Season</b>: ", point$Season,
+  #                     "<br> <b>&#x398;</b>: ", round(point$WC_mean, 3),
+  #                     "<br> <b>&#x3A8;</b>: ", round(point$WP_mean, 3))
+  #   wellPanel(
+  #     style = style,
+  #     p(HTML(tooltip))
+  #   )
+  # })
 })

@@ -6,6 +6,7 @@ library(shiny)
 library(ggplot2)
 library(ggthemes)
 library(cowplot)
+library(shinycssloaders)
 
 # First tab: Seasonal timeseries by treatment
 load("soilTempDaily.Rdata")
