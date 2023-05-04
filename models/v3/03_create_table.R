@@ -19,7 +19,7 @@ SWC_to_SWP <- function(SWC, alpha.cm, n, theta.r) {
 }
 
 # Load parameters
-load("models/v2/coda/jm_coda.Rdata")
+load("models/v3/coda/jm_coda.Rdata")
 
 # Calculate posterior means
 sum_param <- tidyMCMC(jm_coda, 
@@ -37,7 +37,17 @@ trt <- sum_param %>%
            grepl("^theta.r" , term)) %>%
   mutate(parameter = sub("\\[[0-9]\\]", "", term),
          Summer = case_when(grepl("1", term) ~ "S1",
-                            grepl("2", term) ~ "S4"))
+                            grepl("2", term) ~ "S1",
+                            grepl("3", term) ~ "S4",
+                            grepl("4", term) ~ "S4"),
+         Depth = case_when(grepl("1", term) ~ "1",
+                           grepl("2", term) ~ "2",
+                           grepl("3", term) ~ "1",
+                           grepl("4", term) ~ "2"),
+         TRT = case_when(grepl("1", term) ~ "1_S1",
+                         grepl("2", term) ~ "2_S1",
+                         grepl("3", term) ~ "1_S4",
+                         grepl("4", term) ~ "2_S4"))
 
 # Test single curve with posterior means
 test <- data.frame(swc_in = seq(0.02, 0.44, .0001))
@@ -55,11 +65,17 @@ ggplot(test, aes(x = out_ph_MPa,
 coda_param <- rbind.data.frame(jm_coda[[1]], jm_coda[[2]], jm_coda[[3]]) %>%
   select(starts_with("E"))
 
-coda_param_S1 <- rbind.data.frame(jm_coda[[1]], jm_coda[[2]], jm_coda[[3]]) %>%
-  select(filter(trt, Summer == "S1")$term)
+coda_param_1_S1 <- rbind.data.frame(jm_coda[[1]], jm_coda[[2]], jm_coda[[3]]) %>%
+  select(filter(trt, TRT == "1_S1")$term)
 
-coda_param_S4 <- rbind.data.frame(jm_coda[[1]], jm_coda[[2]], jm_coda[[3]]) %>%
-  select(filter(trt, Summer == "S4")$term)
+coda_param_2_S1 <- rbind.data.frame(jm_coda[[1]], jm_coda[[2]], jm_coda[[3]]) %>%
+  select(filter(trt, TRT == "2_S1")$term)
+
+coda_param_1_S4 <- rbind.data.frame(jm_coda[[1]], jm_coda[[2]], jm_coda[[3]]) %>%
+  select(filter(trt, TRT == "1_S4")$term)
+
+coda_param_2_S4 <- rbind.data.frame(jm_coda[[1]], jm_coda[[2]], jm_coda[[3]]) %>%
+  select(filter(trt, TRT == "2_S4")$term)
 
 # Custom functions
 swc_apply <- function(vec, SWC) { # vector of parameters, (alpha.cm, n, theta.r)
@@ -67,21 +83,29 @@ swc_apply <- function(vec, SWC) { # vector of parameters, (alpha.cm, n, theta.r)
   num <- log((0.44 - vec[3]) / (SWC - vec[3])) / (1 - 1/vec[2])
   under <- (exp(num) - 1) / (vec[1]^vec[2])
   SWP_cm <- under^(1/vec[2])
-  SWP_MPa = ud.convert(SWP_cm, "cm_H2O", "MPa")
+  SWP_MPa <- ifelse(is.finite(SWP_cm[[1]]), # make sure list element is finite before converting
+                    ud.convert(SWP_cm, "cm_H2O", "MPa"), NA)
   return(SWP_MPa)
   suppressWarnings()
 }
 cnt <- function(x) {sum(!is.na(x))}
 
 # Calculate swp for all sets of parameters
-out <- apply(coda_param, MARGIN = 1, FUN = swc_apply,
+
+out_tot <- apply(coda_param, MARGIN = 1, FUN = swc_apply,
              SWC = seq(0.02, 0.44, .0001))
 
-out_S1 <- apply(coda_param_S1, MARGIN = 1, FUN = swc_apply,
+out_1_S1 <- apply(coda_param_1_S1, MARGIN = 1, FUN = swc_apply,
              SWC = seq(0.02, 0.44, .0001))
 
-out_S4 <- apply(coda_param_S4, MARGIN = 1, FUN = swc_apply,
+out_2_S1 <- apply(coda_param_2_S1, MARGIN = 1, FUN = swc_apply,
+                  SWC = seq(0.02, 0.44, .0001))
+
+out_1_S4 <- apply(coda_param_1_S4, MARGIN = 1, FUN = swc_apply,
                 SWC = seq(0.02, 0.44, .0001))
+
+out_2_S4 <- apply(coda_param_2_S4, MARGIN = 1, FUN = swc_apply,
+                  SWC = seq(0.02, 0.44, .0001))
 
 # Summarize to number, median, and central 50th percentile
 out_df <- cbind.data.frame(SWC  = seq(0.02, 0.44, .0001),
@@ -89,12 +113,18 @@ out_df <- cbind.data.frame(SWC  = seq(0.02, 0.44, .0001),
                            SWP_MPa_50 = apply(out, 1, FUN = median, na.rm = TRUE),
                            SWP_MPa_25 = apply(out, 1, FUN = quantile, probs = 0.25, na.rm = TRUE),
                            SWP_MPa_75 = apply(out, 1, FUN = quantile, probs = 0.75, na.rm = TRUE),
-                           S1_MPa_50 = apply(out_S1, 1, FUN = median, na.rm = TRUE),
-                           S1_MPa_25 = apply(out_S1, 1, FUN = quantile, probs = 0.25, na.rm = TRUE),
-                           S1_MPa_75 = apply(out_S1, 1, FUN = quantile, probs = 0.75, na.rm = TRUE),
-                           S4_MPa_50 = apply(out_S4, 1, FUN = median, na.rm = TRUE),
-                           S4_MPa_25 = apply(out_S4, 1, FUN = quantile, probs = 0.25, na.rm = TRUE),
-                           S4_MPa_75 = apply(out_S4, 1, FUN = quantile, probs = 0.75, na.rm = TRUE)) %>%
+                           `1_S1_MPa_50` = apply(out_1_S1, 1, FUN = median, na.rm = TRUE),
+                           `1_S1_MPa_25` = apply(out_1_S1, 1, FUN = quantile, probs = 0.25, na.rm = TRUE),
+                           `1_S1_MPa_75` = apply(out_1_S1, 1, FUN = quantile, probs = 0.75, na.rm = TRUE),
+                           `2_S1_MPa_50` = apply(out_2_S1, 1, FUN = median, na.rm = TRUE),
+                           `2_S1_MPa_25` = apply(out_2_S1, 1, FUN = quantile, probs = 0.25, na.rm = TRUE),
+                           `2_S1_MPa_75` = apply(out_2_S1, 1, FUN = quantile, probs = 0.75, na.rm = TRUE),
+                           `1_S4_MPa_50` = apply(out_1_S4, 1, FUN = median, na.rm = TRUE),
+                           `1_S4_MPa_25` = apply(out_1_S4, 1, FUN = quantile, probs = 0.25, na.rm = TRUE),
+                           `1_S4_MPa_75` = apply(out_1_S4, 1, FUN = quantile, probs = 0.75, na.rm = TRUE),
+                           `2_S4_MPa_50` = apply(out_2_S4, 1, FUN = median, na.rm = TRUE),
+                           `2_S4_MPa_25` = apply(out_2_S4, 1, FUN = quantile, probs = 0.25, na.rm = TRUE),
+                           `2_S4_MPa_75` = apply(out_2_S4, 1, FUN = quantile, probs = 0.75, na.rm = TRUE)) %>%
   filter(SWC < 0.44)
 
 # Plot with error

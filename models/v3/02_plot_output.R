@@ -106,7 +106,17 @@ trt <- sum_param %>%
            grepl("^theta.r" , term)) %>%
   mutate(parameter = sub("\\[[0-9]\\]", "", term),
          Treatment = case_when(grepl("1", term) ~ "S1",
-                               grepl("2", term) ~ "S4"),
+                               grepl("2", term) ~ "S1",
+                               grepl("3", term) ~ "S4",
+                               grepl("4", term) ~ "S4"),
+         Depth = case_when(grepl("1", term) ~ "1",
+                           grepl("2", term) ~ "2",
+                           grepl("3", term) ~ "1",
+                           grepl("4", term) ~ "2"),
+         TRT = case_when(grepl("1", term) ~ "1_S1",
+                         grepl("2", term) ~ "2_S1",
+                         grepl("3", term) ~ "1_S4",
+                         grepl("4", term) ~ "2_S4"),
          parameter = factor(parameter, levels = c("theta.r", "alpha.cm", "n")))
 
 ggplot() +
@@ -115,7 +125,7 @@ ggplot() +
                       y = estimate,
                       ymin = conf.low, 
                       ymax = conf.high,
-                      color = Treatment),
+                      color = TRT),
                   position = position_dodge(width = 1)) +
   geom_pointrange(data = pop,
                   aes(x = parameter,
@@ -127,11 +137,13 @@ ggplot() +
 
 sum_param %>%
   mutate(parameter = sub("\\[[0-9]\\]", "", term),
-         Treatment = case_when(grepl("1", term) ~ "S1",
-                               grepl("2", term) ~ "S4"),
+         TRT = case_when(grepl("1", term) ~ "1_S1",
+                         grepl("2", term) ~ "2_S1",
+                         grepl("3", term) ~ "1_S4",
+                         grepl("4", term) ~ "2_S4"),
          parameter = factor(parameter, levels = c("theta.r", "alpha.cm", "n"))) %>%
   filter(parameter %in% c("alpha.cm", "n", "theta.r")) %>%
-  ggplot(aes(x = Treatment, y = estimate)) +
+  ggplot(aes(x = TRT, y = estimate)) +
   geom_pointrange(aes(ymin = conf.low, 
                       ymax = conf.high)) +
   scale_y_continuous("Posterior estimate") +

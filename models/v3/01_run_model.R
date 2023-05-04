@@ -31,7 +31,7 @@ dat_list <- list(theta = dat$WC_mean,
                  Nobs = nrow(dat),
                  theta.s = 0.44, # porosity of loamy sand
                  h.cm = -1*dat$pressure_head_cm,
-                 trt = as.numeric(as.factor(dat$TRT)), # 1 = 1_S1, 2 = 2_S2, 3 = 1_S4, 4 = 2_S4
+                 trt = as.numeric(as.factor(dat$TRT)), # 1 = 1_S1, 2 = 2_S1, 3 = 1_S4, 4 = 2_S4
                  Ntrt = length(unique(dat$TRT)),
                  Salpha = 0.5,
                  Sn = 0.5,
