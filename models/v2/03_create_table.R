@@ -2,6 +2,7 @@
 # Run through with range of SWC and posterior parameter sets
 library(dplyr)
 library(coda)
+library(udunits2)
 library(broom.mixed)
 
 # Define inverse function
@@ -39,7 +40,7 @@ trt <- sum_param %>%
                             grepl("2", term) ~ "S4"))
 
 # Test single curve with posterior means
-test <- data.frame(swc_in = seq(0.04, 0.44, .0001))
+test <- data.frame(swc_in = seq(0.02, 0.44, .0001))
 test$out_ph_MPa <- SWC_to_SWP(test$swc_in, pop$estimate[1], pop$estimate[2], pop$estimate[3])
 
 ggplot(test, aes(x = out_ph_MPa,
@@ -74,16 +75,16 @@ cnt <- function(x) {sum(!is.na(x))}
 
 # Calculate swp for all sets of parameters
 out <- apply(coda_param, MARGIN = 1, FUN = swc_apply,
-             SWC = seq(0.04, 0.44, .0001))
+             SWC = seq(0.02, 0.44, .0001))
 
 out_S1 <- apply(coda_param_S1, MARGIN = 1, FUN = swc_apply,
-             SWC = seq(0.04, 0.44, .0001))
+             SWC = seq(0.02, 0.44, .0001))
 
 out_S4 <- apply(coda_param_S4, MARGIN = 1, FUN = swc_apply,
-                SWC = seq(0.04, 0.44, .0001))
+                SWC = seq(0.02, 0.44, .0001))
 
 # Summarize to number, median, and central 50th percentile
-out_df <- cbind.data.frame(SWC  = seq(0.04, 0.44, .0001),
+out_df <- cbind.data.frame(SWC  = seq(0.02, 0.44, .0001),
                            n = apply(out, 1, FUN = cnt),
                            SWP_MPa_50 = apply(out, 1, FUN = median, na.rm = TRUE),
                            SWP_MPa_25 = apply(out, 1, FUN = quantile, probs = 0.25, na.rm = TRUE),
@@ -98,7 +99,7 @@ out_df <- cbind.data.frame(SWC  = seq(0.04, 0.44, .0001),
 
 # Plot with error
 out_df %>%
-  filter(n > 1000) %>%
+  # filter(n > 1000) %>%
   ggplot() +
   geom_errorbar(aes(x = SWC,
                     ymin = SWP_MPa_25,
