@@ -9,7 +9,13 @@ library(cowplot)
 library(udunits2)
 
 # Load irrigation + soil + season data
-load("soildata_app/irrigationDaily.Rdata")
+# load("soildata_app/irrigationDaily.Rdata")
+irig <- readr::read_csv("data/irrigation.csv") |> 
+  mutate(date = lubridate::mdy(date)) |> 
+  tidyr::pivot_longer(-date, 
+                      names_to = "Treatment", 
+                      values_to = "irrigation_mm") %>%
+  tidyr::drop_na()
 load("soildata_app/soilWPWCDaily.Rdata")
 load("soildata_app/season.Rdata")
 
@@ -63,11 +69,11 @@ S4 <- WPWC_daily %>%
   mutate(year_season = paste0(Year, "_", Season)) 
 
 rem_date <- irig %>%
-  filter(Summer == "S4",
+  filter(Treatment == "S4",
          irrigation_mm != 0) %>%
   mutate(date_1 = date + 1,
          date_2 = date + 2) %>%
-  select(-Summer, -irrigation_mm) %>%
+  select(-Treatment, -irrigation_mm) %>%
   tidyr::pivot_longer(date:date_2, 
                       names_to = "type",
                       values_to = "date")
@@ -87,12 +93,13 @@ pulse_ends <- as.Date(c("2020-08-02",
                         "2021-10-31"))
 
 pulse <- irig %>%
-  filter(Summer == "S4",
+  filter(Treatment == "S4",
          irrigation_mm != 0) %>%
   fuzzy_left_join(season, 
                   by = c("date" = "st",
                          "date" = "en"),
                   match_fun = list(`>=`, `<=`)) %>%
+  filter(Year %in% 2020:2021) %>%
   select(-st, -en) %>%
   filter(!is.na(Season),
          Season == "Growing",
@@ -175,3 +182,7 @@ ggplot(out, aes(x = -pressure_head_m, y = WC_mean,
 ggplot(filter(out, Depth ==2)) +
   geom_histogram(aes(x = -pressure_head_m)) +
   scale_x_log10()
+
+
+#### Write out to other project folder
+readr::write_csv(out, "../../Rainman/repos/pulse-chase-water-potential/data_clean/moisture_release_auto.csv")
